@@ -40,7 +40,11 @@ async function resizeImage(imageData) {
     });
     let newPixel111 = group(b, 8);
     newPixel111.forEach((e, i) => {
-      c += `${e.join("")},`;
+      let bre = `${e[0]}${e[1]}${e[2]}${e[3]}`;
+      let pre = `${e[4]}${e[5]}${e[6]}${e[7]}`;
+      let newBre = setHex(bre);
+      let newPre = setHex(pre);
+      c += `0X${newBre}${newPre},`;
       if ((i + 1) % 16 === 0) c += "\n";
       return;
     });
@@ -88,3 +92,56 @@ const group = (arr, num) => {
   });
   return ret;
 };
+
+const setHex = (key) => {
+  switch (key) {
+    case "0001":
+      return "1";
+      break;
+    case "0010":
+      return "2";
+      break;
+    case "0011":
+      return "3";
+      break;
+    case "0100":
+      return "4";
+      break;
+    case "0101":
+      return "5";
+      break;
+    case "0110":
+      return "6";
+      break;
+    case "0111":
+      return "7";
+      break;
+    case "1000":
+      return "8";
+      break;
+    case "1001":
+      return "9";
+      break;
+    case "1010":
+      return "A";
+      break;
+    case "1011":
+      return "B";
+      break;
+    case "1100":
+      return "C";
+      break;
+    case "1101":
+      return "D";
+      break;
+    case "1110":
+      return "E";
+      break;
+    case "1111":
+      return "F";
+      break;
+    default:
+      return "0";
+      break;
+  }
+}; 
