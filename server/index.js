@@ -1,15 +1,14 @@
-// const pngtolcd = require("png-to-lcd");
-const floydSteinberg = require("floyd-steinberg");
 const fs = require("fs");
+const floydSteinberg = require("floyd-steinberg");
 const sharp = require("sharp");
 const PNG = require("pngjs").PNG;
 const getPixels = require("get-pixels");
 
-resizeImage("abb.jpg");
+formatoriginImageUrl("cpp.jpg");
 
-async function resizeImage(imageData) {
+async function formatoriginImageUrl(originImageUrl) {
   try {
-    await sharp(imageData)
+    await sharp(originImageUrl)
       .resize({
         width: 128,
         height: 296,
@@ -18,12 +17,19 @@ async function resizeImage(imageData) {
       .png({ quality: 90 })
       .toFile(`./out.png`);
 
-    await fs
-      .createReadStream("out.png")
-      .pipe(new PNG())
-      .on("parsed", function () {
-        floydSteinberg(this).pack().pipe(fs.createWriteStream("out1.png"));
-      });
+    let data = fs.readFileSync("out.png");
+    let png = PNG.sync.read(data);
+    let ditherImage = floydSteinberg(png);
+    let buffer = PNG.sync.write(ditherImage);
+
+    fs.writeFileSync("out1.png", buffer);
+
+    // await fs
+    //   .createReadStream("out.png")
+    //   .pipe(new PNG())
+    //   .on("parsed", function () {
+    //     floydSteinberg(this).pack().pipe(fs.createWriteStream("out1.png"));
+    //   });
 
     let pixelData = await getPixelsPro("./out1.png");
     let newPixel = await formatRGBAs(pixelData);
@@ -144,4 +150,4 @@ const setHex = (key) => {
       return "0";
       break;
   }
-}; 
+};

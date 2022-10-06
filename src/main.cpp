@@ -5,39 +5,6 @@
 #include "imagedata.h"
 #include <stdlib.h>
 
-#include <BluetoothSerial.h>
-
-bool btIsOn;// It's true when bluetooth is on
-bool btConn;// It's true when bluetooth has connected client 
-int  msgPos;// Position in buffer from where data is expected
-int  Data_length;// Length of loaded data
-
-/* Client ---------------------------------------------------------------------*/
-BluetoothSerial btClient; // Bluetooth client 
-
-/* Avaialble bytes in a stream ------------------------------------------------*/
-int Srvr__available()
-{
-    return btIsOn ? btClient.available() : false;
-}
-
-void Srvr__write(const char*value)
-{
-    // Write data to bluetooth
-    if (btIsOn) btClient.write((const uint8_t*)value, strlen(value));
-}
-
-int Srvr__read()
-{
-    return btIsOn ? btClient.read() : -1;
-}
-
-void Srvr__flush()
-{
-    // Clear Bluetooth's stream
-    if (btIsOn) btClient.flush();  
-}
-
 /* Entry point ----------------------------------------------------------------*/
 void setup()
 {
