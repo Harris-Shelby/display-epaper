@@ -4,7 +4,7 @@ const sharp = require("sharp");
 const PNG = require("pngjs").PNG;
 const getPixels = require("get-pixels");
 
-formatoriginImageUrl("cpp.jpg");
+formatoriginImageUrl("./cpp.jpg");
 
 async function formatoriginImageUrl(originImageUrl) {
   try {
@@ -15,37 +15,28 @@ async function formatoriginImageUrl(originImageUrl) {
       })
       .toFormat("jpeg")
       .png({ quality: 90 })
-      .toFile(`./out.png`);
+      .toFile(`./sharpImg.png`);
 
-    let data = fs.readFileSync("out.png");
-    let png = PNG.sync.read(data);
-    let ditherImage = floydSteinberg(png);
+    let OriginImgData = fs.readFileSync("./sharpImg.png");
+    let pngImgData = PNG.sync.read(OriginImgData);
+    let ditherImage = floydSteinberg(pngImgData);
     let buffer = PNG.sync.write(ditherImage);
 
-    fs.writeFileSync("out1.png", buffer);
+    fs.writeFileSync("./ditherImg.png", buffer);
 
-    // await fs
-    //   .createReadStream("out.png")
-    //   .pipe(new PNG())
-    //   .on("parsed", function () {
-    //     floydSteinberg(this).pack().pipe(fs.createWriteStream("out1.png"));
-    //   });
-
-    let pixelData = await getPixelsPro("./out1.png");
-    let newPixel = await formatRGBAs(pixelData);
+    let pixelImgData = await getPixelsPro("./ditherImg.png");
+    let RGBAImgData = await formatRGBAs(pixelImgData);
     let b = [];
     let c = "";
-    newPixel.forEach((e, i) => {
+    RGBAImgData.forEach((e, i) => {
       if (`${e.join("")}` === "1111") {
         b.push(1);
       } else {
         b.push(0);
       }
-      // if ((i + 1) % 128 === 0) b += "\n";
-      // return;
     });
-    let newPixel111 = group(b, 8);
-    newPixel111.forEach((e, i) => {
+    let BinImgData = group(b, 8);
+    BinImgData.forEach((e, i) => {
       let bre = `${e[0]}${e[1]}${e[2]}${e[3]}`;
       let pre = `${e[4]}${e[5]}${e[6]}${e[7]}`;
       let newBre = setHex(bre);
