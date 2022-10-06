@@ -4,9 +4,9 @@ const sharp = require("sharp");
 const PNG = require("pngjs").PNG;
 const getPixels = require("get-pixels");
 
-formatoriginImageUrl("./cpp.jpg");
+formatImgData("./cpp.jpg");
 
-async function formatoriginImageUrl(originImageUrl) {
+async function formatImgData(originImageUrl) {
   try {
     await sharp(originImageUrl)
       .resize({
