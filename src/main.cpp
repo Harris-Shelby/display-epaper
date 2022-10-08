@@ -4,18 +4,108 @@
 #include "GUI_Paint.h"
 #include "imagedata.h"
 #include <stdlib.h>
+#include <WiFi.h>
+#include <HTTPClient.h>
+#include "../lib/ArduinoJson/ArduinoJson.h"
+#include "SPIFFS.h"
+
+DynamicJsonDocument JSON_Buffer(40*1024);
+const char *status = NULL; 
+const char *Epapersss = NULL;
+
+const char *ssid = "GL-MT1300-08c"; //"your ssid";
+const char *password = "goodlife";   //"your password";
+
+const char*  server = "http://192.168.8.107:4000/api/v1/EpaperImg"; 
+
+JsonObject root;
+
+void WiFi_Connect() {
+   WiFi.begin(ssid, password);
+
+   Serial.print("Connecting to ");
+   Serial.println(ssid);
+
+   while (WiFi.status() != WL_CONNECTED) {
+       delay(300);
+       Serial.print(".");
+   }
+
+   Serial.println("WiFi connected");
+   Serial.print("IP address: ");
+   Serial.println(WiFi.localIP());
+
+} 
+
+void getEpaperImgData()
+{
+	HTTPClient http;
+	http.begin(server); //HTTP begin
+	int httpCode = http.GET();
+
+	if (httpCode > 0)
+	{
+		// httpCode will be negative on error
+		Serial.printf("HTTP Get Code: %d\r\n", httpCode);
+
+		if (httpCode == 200) // 收到正确的内容
+		{
+      String response = http.getString();
+      DeserializationError error = deserializeJson(JSON_Buffer, response);
+      if (error) {
+        Serial.println("deserializeJson resBuff error");
+        return;
+      } else {
+        deserializeJson(JSON_Buffer, response);
+        root = JSON_Buffer.as<JsonObject>();
+        JsonArray Imgdata = root["data"]; 
+        JsonObject EpaperSS = Imgdata[0];
+        Epapersss = EpaperSS["EpaperImgData"];
+
+        if (!SPIFFS.begin(true)) {
+          Serial.println("An Error has occurred while mounting SPIFFS");
+          return;
+        }
+      
+        File file = SPIFFS.open("/test.txt", FILE_WRITE);
+      
+        if (!file) {
+          Serial.println("There was an error opening the file for writing");
+          return;
+        }
+        if (file.print("TEST")) {
+          Serial.println("File was written");
+        } else {
+          Serial.println("File write failed");
+        }
+      
+        file.close();
+      
+      }
+		}
+	}
+	else
+	{
+		Serial.printf("HTTP Get Error: %s\n", http.errorToString(httpCode).c_str());
+	}
+
+	http.end();
+}
 
 /* Entry point ----------------------------------------------------------------*/
 void setup()
 {
+  // Serial.begin(115200);
+
   printf("EPD_2IN9_test Demo\r\n");
   DEV_Module_Init();
-
+  WiFi_Connect();
     printf("e-Paper Init and Clear...\r\n");
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
-    DEV_Delay_ms(500);
-
+    DEV_Delay_ms(1000);
+    getEpaperImgData();
+    DEV_Delay_ms(1000);
     //Create a new image cache
     UBYTE *BlackImage;
     /* you have to edit the startup_stm32fxxx.s file and set a big enough heap size */
@@ -34,6 +124,13 @@ void setup()
     Paint_SelectImage(BlackImage);
     Paint_Clear(WHITE);
     // 微雪电子图片
+
+    unsigned char* y;
+          
+    y = (unsigned char*) Epapersss;
+
+    Serial.println(Epapersss);
+
     Paint_DrawBitMap(gImage_2in9);
 
     EPD_2IN9_Display(BlackImage);
@@ -127,5 +224,6 @@ void setup()
 void loop()
 {
   //
+  // getEpaperImgData();
   while(1);
 }
