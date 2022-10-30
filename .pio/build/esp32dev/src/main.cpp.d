@@ -131,7 +131,7 @@
  src/utility/Debug.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/Wire/src/Wire.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/cores/esp32/esp32-hal.h \
- src/fonts.h src/imagedata.h \
+ src/fonts.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFi.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/cores/esp32/Print.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/cores/esp32/IPv6Address.h \
@@ -235,6 +235,4 @@
  src/../lib/ArduinoJson/ArduinoJson.h \
  src/../lib/ArduinoJson/src/ArduinoJson.h \
  src/../lib/ArduinoJson/src/ArduinoJson.hpp \
- src/../lib/ArduinoJson/src/ArduinoJson/Configuration.hpp \
- /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/SPIFFS/src/SPIFFS.h \
- /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/FS/src/FS.h
+ src/../lib/ArduinoJson/src/ArduinoJson/Configuration.hpp

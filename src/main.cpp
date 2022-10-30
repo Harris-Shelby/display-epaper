@@ -2,23 +2,31 @@
 #include "DEV_Config.h"
 #include "EPD.h"
 #include "GUI_Paint.h"
-#include "imagedata.h"
+// #include "imagedata.h"
+#include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "../lib/ArduinoJson/ArduinoJson.h"
-#include "SPIFFS.h"
 
-DynamicJsonDocument JSON_Buffer(40*1024);
+DynamicJsonDocument JSON_Buffer(12*1024);
+
+unsigned char buffer[12*1024]; // not needed = {0}; 
+
 const char *status = NULL; 
-const char *Epapersss = NULL;
 
 const char *ssid = "GL-MT1300-08c"; //"your ssid";
 const char *password = "goodlife";   //"your password";
 
-const char*  server = "http://192.168.8.107:4000/api/v1/EpaperImg"; 
+const char*  server = "http://45.88.179.159:4000/api/v1/EpaperImg?limit=1"; 
 
-JsonObject root;
+
+// unsigned char convert(const string& s){
+//    unsigned char x;
+//    sscanf(s.c_str(),"%x",&x);
+//    return x;
+// }
 
 void WiFi_Connect() {
    WiFi.begin(ssid, password);
@@ -48,40 +56,26 @@ void getEpaperImgData()
 		// httpCode will be negative on error
 		Serial.printf("HTTP Get Code: %d\r\n", httpCode);
 
-		if (httpCode == 200) // 收到正确的内容
+		if (httpCode == 201) // 收到正确的内容
 		{
-      String response = http.getString();
-      DeserializationError error = deserializeJson(JSON_Buffer, response);
-      if (error) {
-        Serial.println("deserializeJson resBuff error");
-        return;
-      } else {
-        deserializeJson(JSON_Buffer, response);
-        root = JSON_Buffer.as<JsonObject>();
-        JsonArray Imgdata = root["data"]; 
-        JsonObject EpaperSS = Imgdata[0];
-        Epapersss = EpaperSS["EpaperImgData"];
+            delay(300);
+            DeserializationError error = deserializeJson(JSON_Buffer, http.getStream());
 
-        if (!SPIFFS.begin(true)) {
-          Serial.println("An Error has occurred while mounting SPIFFS");
-          return;
-        }
-      
-        File file = SPIFFS.open("/test.txt", FILE_WRITE);
-      
-        if (!file) {
-          Serial.println("There was an error opening the file for writing");
-          return;
-        }
-        if (file.print("TEST")) {
-          Serial.println("File was written");
-        } else {
-          Serial.println("File write failed");
-        }
-      
-        file.close();
-      
-      }
+            if (error) {
+                Serial.print("deserializeJson() failed: ");
+                Serial.println(error.c_str());
+                return;
+            }
+            const char* data_data_0_EpaperImgData = JSON_Buffer["data"]["data"][0]["EpaperImgData"];
+
+            int buffer_half_len;
+
+            buffer_half_len = strlen(data_data_0_EpaperImgData)/2;  // avoiding division in the for loop;
+
+            for(int i = 0;  i < buffer_half_len; i++, data_data_0_EpaperImgData += 2)
+            {
+                sscanf(data_data_0_EpaperImgData, "%02hhX", &buffer[i]);
+            }
 		}
 	}
 	else
@@ -125,13 +119,13 @@ void setup()
     Paint_Clear(WHITE);
     // 微雪电子图片
 
-    unsigned char* y;
+    // unsigned char* y;
           
-    y = (unsigned char*) Epapersss;
+    // y = (unsigned char*) Epapersss;
 
-    Serial.println(Epapersss);
 
-    Paint_DrawBitMap(gImage_2in9);
+
+    Paint_DrawBitMap(buffer);
 
     EPD_2IN9_Display(BlackImage);
     DEV_Delay_ms(2000);
