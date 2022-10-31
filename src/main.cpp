@@ -2,7 +2,6 @@
 #include "DEV_Config.h"
 #include "EPD.h"
 #include "GUI_Paint.h"
-// #include "imagedata.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,22 +10,25 @@
 #include "../lib/ArduinoJson/ArduinoJson.h"
 
 DynamicJsonDocument JSON_Buffer(12*1024);
+DynamicJsonDocument Num_Buffer(1*1024);
 
-unsigned char buffer[12*1024]; // not needed = {0}; 
+//Create a new image cache
+unsigned char buffer[12*1024];
+const char* Numbuffer[1*1024];
+
+int results;
+
+UBYTE *BlackImage;
 
 const char *status = NULL; 
 
 const char *ssid = "GL-MT1300-08c"; //"your ssid";
 const char *password = "goodlife";   //"your password";
 
-const char*  server = "http://45.88.179.159:4000/api/v1/EpaperImg?limit=1"; 
+const char *serverNum = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'"; 
 
+const char *server = "http://45.88.179.159:4000/api/v1/EpaperImg/"; 
 
-// unsigned char convert(const string& s){
-//    unsigned char x;
-//    sscanf(s.c_str(),"%x",&x);
-//    return x;
-// }
 
 void WiFi_Connect() {
    WiFi.begin(ssid, password);
@@ -45,10 +47,51 @@ void WiFi_Connect() {
 
 } 
 
-void getEpaperImgData()
+void getAllData()
 {
 	HTTPClient http;
-	http.begin(server); //HTTP begin
+	http.begin(serverNum);
+	int httpCode = http.GET();
+
+	if (httpCode > 0)
+	{
+		Serial.printf("HTTP Get Code: %d\r\n", httpCode);
+
+		if (httpCode == 201) // 收到正确的内容
+		{
+            delay(300);
+            DeserializationError error = deserializeJson(Num_Buffer, http.getStream());
+
+            if (error) {
+                Serial.print("deserializeJson() failed: ");
+                Serial.println(error.c_str());
+                return;
+            }
+            results = Num_Buffer["results"]; // 3
+            JsonArray nums = Num_Buffer["data"]["data"];
+            for (int i = 0; i < results; i++)
+            {
+                /* code */
+                const char* newdata = nums[i]["_id"];                
+                Numbuffer[i] = newdata;
+            }
+		}
+	}
+	else
+	{
+		Serial.printf("HTTP Get Error: %s\n", http.errorToString(httpCode).c_str());
+	}
+
+	http.end();
+}
+
+void getEpaperImgData(const char* id)
+{
+	char address[100];
+    strcpy(address, server);
+    strcat(address, id); 
+    HTTPClient http;
+	http.begin(address); //HTTP begin
 	int httpCode = http.GET();
 
 	if (httpCode > 0)
@@ -56,7 +99,7 @@ void getEpaperImgData()
 		// httpCode will be negative on error
 		Serial.printf("HTTP Get Code: %d\r\n", httpCode);
 
-		if (httpCode == 201) // 收到正确的内容
+		if (httpCode == 200) // 收到正确的内容
 		{
             delay(300);
             DeserializationError error = deserializeJson(JSON_Buffer, http.getStream());
@@ -66,7 +109,7 @@ void getEpaperImgData()
                 Serial.println(error.c_str());
                 return;
             }
-            const char* data_data_0_EpaperImgData = JSON_Buffer["data"]["data"][0]["EpaperImgData"];
+            const char* data_data_0_EpaperImgData = JSON_Buffer["data"]["data"]["EpaperImgData"];
 
             int buffer_half_len;
 
@@ -89,46 +132,39 @@ void getEpaperImgData()
 /* Entry point ----------------------------------------------------------------*/
 void setup()
 {
-  // Serial.begin(115200);
-
-  printf("EPD_2IN9_test Demo\r\n");
-  DEV_Module_Init();
-  WiFi_Connect();
-    printf("e-Paper Init and Clear...\r\n");
+    DEV_Module_Init();
+    WiFi_Connect();
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
     DEV_Delay_ms(1000);
-    getEpaperImgData();
+    getAllData();
     DEV_Delay_ms(1000);
-    //Create a new image cache
-    UBYTE *BlackImage;
+ 
     /* you have to edit the startup_stm32fxxx.s file and set a big enough heap size */
     UWORD Imagesize = ((EPD_2IN9_WIDTH % 8 == 0)? (EPD_2IN9_WIDTH / 8 ): (EPD_2IN9_WIDTH / 8 + 1)) * EPD_2IN9_HEIGHT;
     if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
         printf("Failed to apply for black memory...\r\n");
         while(1);
     }
-    printf("Paint_NewImage\r\n");
-    Paint_NewImage(BlackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);
+    // printf("Paint_NewImage\r\n");
+    // Paint_NewImage(BlackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);
 
 
 #if 1   //show image for array  
     Paint_NewImage(BlackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
     printf("show image for array\r\n");
     Paint_SelectImage(BlackImage);
-    Paint_Clear(WHITE);
-    // 微雪电子图片
+    for (int i = 0; i < results; i++)
+    {
+        /* code */
+        getEpaperImgData(Numbuffer[i]);
+        Paint_Clear(WHITE);
 
-    // unsigned char* y;
-          
-    // y = (unsigned char*) Epapersss;
+        Paint_DrawBitMap(buffer);
 
-
-
-    Paint_DrawBitMap(buffer);
-
-    EPD_2IN9_Display(BlackImage);
-    DEV_Delay_ms(2000);
+        EPD_2IN9_Display(BlackImage);
+        DEV_Delay_ms(2000);
+    }
 #endif
 
 // #if 1   // Drawing on the image
@@ -208,8 +244,8 @@ void setup()
 //     EPD_2IN9_Init(EPD_2IN9_FULL);
 //     EPD_2IN9_Clear();
 
-    printf("Goto Sleep...\r\n");
-    EPD_2IN9_Sleep();
+    // printf("Goto Sleep...\r\n");
+    // EPD_2IN9_Sleep();
     // free(BlackImage);
     // BlackImage = NULL;
 }
@@ -217,7 +253,13 @@ void setup()
 /* The main loop -------------------------------------------------------------*/
 void loop()
 {
-  //
-  // getEpaperImgData();
+    // DEV_Delay_ms(6000);
+    // EPD_2IN9_Init(EPD_2IN9_PART);
+    // getEpaperImgData();
+    // Paint_SelectImage(BlackImage);
+    // // Paint_Clear(WHITE);
+    // Paint_DrawBitMap(buffer);
+    // EPD_2IN9_Display(BlackImage);
+
   while(1);
 }
