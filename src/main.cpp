@@ -13,13 +13,12 @@ DynamicJsonDocument idJsonDocument(JSON_BUFFER_SIZE);
 DynamicJsonDocument imageJsonDocument(NUM_BUFFER_SIZE);
 const int IMAGE_SIZE = ((EPD_2IN9_WIDTH % 8 == 0) ? (EPD_2IN9_WIDTH / 8) : (EPD_2IN9_WIDTH / 8 + 1)) * EPD_2IN9_HEIGHT;
 unsigned char buffer[IMAGE_SIZE];
-const char *num_ids[NUM_IMAGES_LIMIT];
-int num_images;
+const char *imageIds[NUM_IMAGES_LIMIT];
+int numImages;
 const char *ids_url = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'"; 
 const char *img_url = "http://45.88.179.159:4000/api/v1/EpaperImg/"; 
 
-// UBYTE *BlackImage;
-unsigned char BlackImage[IMAGE_SIZE];
+unsigned char blackImage[IMAGE_SIZE];
 const char *status = NULL; 
 
 const char *ssid = "GL-MT1300-08c"; //"your ssid";
@@ -57,12 +56,12 @@ void RetrieveAllIds()
         return;
     }
 
-    num_images = imageJsonDocument["results"]; 
+    numImages = imageJsonDocument["results"]; 
     JsonArray nums = imageJsonDocument["data"]["data"];
 
-    for (int i = 0; i < num_images; i++)
+    for (int i = 0; i < numImages; i++)
     {
-        num_ids[i] = nums[i]["_id"];   
+        imageIds[i] = nums[i]["_id"];   
     }
 
 	http.end();
@@ -113,19 +112,19 @@ void setup()
     DEV_Delay_ms(1000);
  
 #if 1   //show image for array  
-    Paint_NewImage(BlackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
+    Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
     printf("show image for array\r\n");
-    Paint_SelectImage(BlackImage);
+    Paint_SelectImage(blackImage);
 #endif
 
 // #if 1   // Drawing on the image
 //     printf("Drawing\r\n");
 //     //1.Select Image
-//     Paint_SelectImage(BlackImage);
+//     Paint_SelectImage(blackImage);
 //     Paint_Clear(WHITE);
 
 //     // 2.Drawing on the image
-//     printf("Drawing:BlackImage\r\n");
+//     printf("Drawing:blackImage\r\n");
 //     Paint_DrawPoint(10, 80, BLACK, DOT_PIXEL_1X1, DOT_STYLE_DFT);
 //     Paint_DrawPoint(10, 90, BLACK, DOT_PIXEL_2X2, DOT_STYLE_DFT);
 //     Paint_DrawPoint(10, 100, BLACK, DOT_PIXEL_3X3, DOT_STYLE_DFT);
@@ -151,14 +150,14 @@ void setup()
 //     Paint_DrawString_CN(130, 0,"你好abc", &Font12CN, BLACK, WHITE);
 //     Paint_DrawString_CN(130, 20, "微雪电子", &Font24CN, WHITE, BLACK);
 
-//     EPD_2IN9_Display(BlackImage);
+//     EPD_2IN9_Display(blackImage);
 //     DEV_Delay_ms(2000);
 // #endif
 
 // #if 1   //Partial refresh, example shows time        
 //     printf("Partial refresh\r\n");
 //     EPD_2IN9_Init(EPD_2IN9_PART);
-//     Paint_SelectImage(BlackImage);
+//     Paint_SelectImage(blackImage);
 //     PAINT_TIME sPaint_time;
 //     sPaint_time.Hour = 12;
 //     sPaint_time.Min = 34;
@@ -186,7 +185,7 @@ void setup()
 //         if(num == 0) {
 //             break;
 //         }
-//         EPD_2IN9_Display(BlackImage);
+//         EPD_2IN9_Display(blackImage);
 //         DEV_Delay_ms(500);//Analog clock 1s
 //     }
 
@@ -197,8 +196,8 @@ void setup()
 
     // printf("Goto Sleep...\r\n");
     // EPD_2IN9_Sleep();
-    // free(BlackImage);
-    // BlackImage = NULL;
+    // free(blackImage);
+    // blackImage = NULL;
 }
 
 /* The main loop -------------------------------------------------------------*/
@@ -207,12 +206,12 @@ void loop()
     // DEV_Delay_ms(6000);
     // EPD_2IN9_Init(EPD_2IN9_PART);
     // getEpaperImgData();
-    // Paint_SelectImage(BlackImage);
+    // Paint_SelectImage(blackImage);
     // // Paint_Clear(WHITE);
     // Paint_DrawBitMap(buffer);
-    // EPD_2IN9_Display(BlackImage);    
+    // EPD_2IN9_Display(blackImage);    
 
-    for (int i = 0; i < num_images; i++)
+    for (int i = 0; i < numImages; i++)
     {
         /* code */
         if(i % 5 == 0) {
@@ -220,12 +219,12 @@ void loop()
         } else {
                 EPD_2IN9_Init(EPD_2IN9_PART);
         }
-        getEpaperImgData(num_ids[i]);
+        getEpaperImgData(imageIds[i]);
         Paint_Clear(WHITE);
 
         Paint_DrawBitMap(buffer);
 
-        EPD_2IN9_Display(BlackImage);
+        EPD_2IN9_Display(blackImage);
         DEV_Delay_ms(2000);
     }
 //   while(1);
