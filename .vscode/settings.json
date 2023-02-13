@@ -5,6 +5,14 @@
     "system_error": "cpp",
     "bitset": "cpp",
     "chrono": "cpp",
-    "algorithm": "cpp"
+    "algorithm": "cpp",
+    "array": "cpp",
+    "deque": "cpp",
+    "forward_list": "cpp",
+    "string": "cpp",
+    "unordered_map": "cpp",
+    "unordered_set": "cpp",
+    "string_view": "cpp",
+    "initializer_list": "cpp"
   }
 }

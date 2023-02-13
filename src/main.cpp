@@ -1,131 +1,103 @@
-/* Includes ------------------------------------------------------------------*/
 #include "DEV_Config.h"
 #include "EPD.h"
 #include "GUI_Paint.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "../lib/ArduinoJson/ArduinoJson.h"
 
-DynamicJsonDocument JSON_Buffer(12*1024);
-DynamicJsonDocument Num_Buffer(1*1024);
+#define JSON_BUFFER_SIZE 12 * 1024
+#define NUM_BUFFER_SIZE 2 * 1024
+#define NUM_IMAGES_LIMIT 200 // assuming there won't be more than 200 images
 
-//Create a new image cache
-unsigned char buffer[12*1024];
-const char* Numbuffer[1*1024];
+DynamicJsonDocument idJsonDocument(JSON_BUFFER_SIZE);
+DynamicJsonDocument imageJsonDocument(NUM_BUFFER_SIZE);
+const int IMAGE_SIZE = ((EPD_2IN9_WIDTH % 8 == 0) ? (EPD_2IN9_WIDTH / 8) : (EPD_2IN9_WIDTH / 8 + 1)) * EPD_2IN9_HEIGHT;
+unsigned char buffer[IMAGE_SIZE];
+const char *num_ids[NUM_IMAGES_LIMIT];
+int num_images;
+const char *ids_url = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'"; 
+const char *img_url = "http://45.88.179.159:4000/api/v1/EpaperImg/"; 
 
-int results;
-
-UBYTE *BlackImage;
-
+// UBYTE *BlackImage;
+unsigned char BlackImage[IMAGE_SIZE];
 const char *status = NULL; 
 
 const char *ssid = "GL-MT1300-08c"; //"your ssid";
 const char *password = "goodlife";   //"your password";
 
-const char *serverNum = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'"; 
-
-const char *server = "http://45.88.179.159:4000/api/v1/EpaperImg/"; 
-
-
-void WiFi_Connect() {
+void connectToWiFi(const char *ssid, const char *password) {
    WiFi.begin(ssid, password);
-
-   Serial.print("Connecting to ");
-   Serial.println(ssid);
-
+   Serial.println("Connecting to " + (String)ssid);
    while (WiFi.status() != WL_CONNECTED) {
        delay(300);
        Serial.print(".");
    }
-
    Serial.println("WiFi connected");
-   Serial.print("IP address: ");
-   Serial.println(WiFi.localIP());
-
+   Serial.println("IP address: " + WiFi.localIP().toString());
 } 
 
-void getAllData()
+void RetrieveAllIds()
 {
 	HTTPClient http;
-	http.begin(serverNum);
+	http.begin(ids_url);
 	int httpCode = http.GET();
 
-	if (httpCode > 0)
-	{
-		Serial.printf("HTTP Get Code: %d\r\n", httpCode);
+    if (httpCode != 201)
+    {
+        Serial.printf("HTTP Get Failed, code: %d\r\n", httpCode);
+        return;
+    }
 
-		if (httpCode == 201) // 收到正确的内容
-		{
-            delay(300);
-            DeserializationError error = deserializeJson(Num_Buffer, http.getStream());
+    Serial.printf("HTTP Get Code: %d\r\n", httpCode);
+    DeserializationError error = deserializeJson(imageJsonDocument, http.getStream());
 
-            if (error) {
-                Serial.print("deserializeJson() failed: ");
-                Serial.println(error.c_str());
-                return;
-            }
-            results = Num_Buffer["results"]; // 3
-            JsonArray nums = Num_Buffer["data"]["data"];
-            for (int i = 0; i < results; i++)
-            {
-                /* code */
-                const char* newdata = nums[i]["_id"];                
-                Numbuffer[i] = newdata;
-            }
-		}
-	}
-	else
-	{
-		Serial.printf("HTTP Get Error: %s\n", http.errorToString(httpCode).c_str());
-	}
+    if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+
+    num_images = imageJsonDocument["results"]; 
+    JsonArray nums = imageJsonDocument["data"]["data"];
+
+    for (int i = 0; i < num_images; i++)
+    {
+        num_ids[i] = nums[i]["_id"];   
+    }
 
 	http.end();
 }
 
 void getEpaperImgData(const char* id)
 {
-	char address[100];
-    strcpy(address, server);
-    strcat(address, id); 
+    String address = img_url;
+    address += id;
     HTTPClient http;
-	http.begin(address); //HTTP begin
+	http.begin(address.c_str());
 	int httpCode = http.GET();
 
-	if (httpCode > 0)
-	{
-		// httpCode will be negative on error
-		Serial.printf("HTTP Get Code: %d\r\n", httpCode);
+    if (httpCode != 200)
+    {
+        Serial.printf("HTTP Get Failed, code: %d\r\n", httpCode);
+        return;
+    }
 
-		if (httpCode == 200) // 收到正确的内容
-		{
-            delay(300);
-            DeserializationError error = deserializeJson(JSON_Buffer, http.getStream());
+    Serial.printf("HTTP Get Code: %d\r\n", httpCode);
+    DeserializationError error = deserializeJson(idJsonDocument, http.getStream());
 
-            if (error) {
-                Serial.print("deserializeJson() failed: ");
-                Serial.println(error.c_str());
-                return;
-            }
-            const char* data_data_0_EpaperImgData = JSON_Buffer["data"]["data"]["EpaperImgData"];
+    if (error) {
+        Serial.print("deserializeJson() failed: ");
+        Serial.println(error.c_str());
+        return;
+    }
+    const char *hexData = idJsonDocument["data"]["data"]["EpaperImgData"];
 
-            int buffer_half_len;
+    int binaryLen = strlen(hexData)/2; 
 
-            buffer_half_len = strlen(data_data_0_EpaperImgData)/2;  // avoiding division in the for loop;
-
-            for(int i = 0;  i < buffer_half_len; i++, data_data_0_EpaperImgData += 2)
-            {
-                sscanf(data_data_0_EpaperImgData, "%02hhX", &buffer[i]);
-            }
-		}
-	}
-	else
-	{
-		Serial.printf("HTTP Get Error: %s\n", http.errorToString(httpCode).c_str());
-	}
-
+    for(int i = 0;  i < binaryLen; i++, hexData += 2)
+    {
+        sscanf(hexData, "%02hhX", &buffer[i]);
+    }
 	http.end();
 }
 
@@ -133,38 +105,17 @@ void getEpaperImgData(const char* id)
 void setup()
 {
     DEV_Module_Init();
-    WiFi_Connect();
+    connectToWiFi(ssid, password);
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
     DEV_Delay_ms(1000);
-    getAllData();
+    RetrieveAllIds();
     DEV_Delay_ms(1000);
  
-    /* you have to edit the startup_stm32fxxx.s file and set a big enough heap size */
-    UWORD Imagesize = ((EPD_2IN9_WIDTH % 8 == 0)? (EPD_2IN9_WIDTH / 8 ): (EPD_2IN9_WIDTH / 8 + 1)) * EPD_2IN9_HEIGHT;
-    if((BlackImage = (UBYTE *)malloc(Imagesize)) == NULL) {
-        printf("Failed to apply for black memory...\r\n");
-        while(1);
-    }
-    // printf("Paint_NewImage\r\n");
-    // Paint_NewImage(BlackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);
-
-
 #if 1   //show image for array  
     Paint_NewImage(BlackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
     printf("show image for array\r\n");
     Paint_SelectImage(BlackImage);
-    for (int i = 0; i < results; i++)
-    {
-        /* code */
-        getEpaperImgData(Numbuffer[i]);
-        Paint_Clear(WHITE);
-
-        Paint_DrawBitMap(buffer);
-
-        EPD_2IN9_Display(BlackImage);
-        DEV_Delay_ms(2000);
-    }
 #endif
 
 // #if 1   // Drawing on the image
@@ -259,7 +210,25 @@ void loop()
     // Paint_SelectImage(BlackImage);
     // // Paint_Clear(WHITE);
     // Paint_DrawBitMap(buffer);
-    // EPD_2IN9_Display(BlackImage);
+    // EPD_2IN9_Display(BlackImage);    
 
-  while(1);
+    for (int i = 0; i < num_images; i++)
+    {
+        /* code */
+        if(i % 5 == 0) {
+                EPD_2IN9_Init(EPD_2IN9_FULL);
+        } else {
+                EPD_2IN9_Init(EPD_2IN9_PART);
+        }
+        getEpaperImgData(num_ids[i]);
+        Paint_Clear(WHITE);
+
+        Paint_DrawBitMap(buffer);
+
+        EPD_2IN9_Display(BlackImage);
+        DEV_Delay_ms(2000);
+    }
+//   while(1);
+    RetrieveAllIds();
+    delay(1000);
 }
