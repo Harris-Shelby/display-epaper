@@ -1,80 +1,3 @@
-/******************************************************************************
-* | File      	:   GUI_Paint.c
-* | Author      :   Waveshare electronics
-* | Function    :	Achieve drawing: draw points, lines, boxes, circles and
-*                   their size, solid dotted line, solid rectangle hollow
-*                   rectangle, solid circle hollow circle.
-* | Info        :
-*   Achieve display characters: Display a single character, string, number
-*   Achieve time display: adaptive size display time minutes and seconds
-*----------------
-* |	This version:   V3.2
-* | Date        :   2020-07-23
-* | Info        :
-* -----------------------------------------------------------------------------
-* V3.2(2020-07-23):
-* 1. Change: Paint_SetScale(UBYTE scale)
-*			Add scale 7 for 5.65f e-Parper
-* 2. Change: Paint_SetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color)  
-* 			Add the branch for scale 7
-* 3. Change: Paint_Clear(UWORD Color)
-*			Add the branch for scale 7
-*
-* V3.1(2019-10-10):
-* 1. Add gray level
-*   PAINT Add Scale
-* 2. Add void Paint_SetScale(UBYTE scale);
-*
-* V3.0(2019-04-18):
-* 1.Change: 
-*    Paint_DrawPoint(..., DOT_STYLE DOT_STYLE)
-* => Paint_DrawPoint(..., DOT_STYLE Dot_Style)
-*    Paint_DrawLine(..., LINE_STYLE Line_Style, DOT_PIXEL Dot_Pixel)
-* => Paint_DrawLine(..., DOT_PIXEL Line_width, LINE_STYLE Line_Style)
-*    Paint_DrawRectangle(..., DRAW_FILL Filled, DOT_PIXEL Dot_Pixel)
-* => Paint_DrawRectangle(..., DOT_PIXEL Line_width, DRAW_FILL Draw_Fill)
-*    Paint_DrawCircle(..., DRAW_FILL Draw_Fill, DOT_PIXEL Dot_Pixel)
-* => Paint_DrawCircle(..., DOT_PIXEL Line_width, DRAW_FILL Draw_Filll)
-*
-* -----------------------------------------------------------------------------
-* V2.0(2018-11-15):
-* 1.add: Paint_NewImage()
-*    Create an image's properties
-* 2.add: Paint_SelectImage()
-*    Select the picture to be drawn
-* 3.add: Paint_SetRotate()
-*    Set the direction of the cache    
-* 4.add: Paint_RotateImage() 
-*    Can flip the picture, Support 0-360 degrees, 
-*    but only 90.180.270 rotation is better
-* 4.add: Paint_SetMirroring() 
-*    Can Mirroring the picture, horizontal, vertical, origin
-* 5.add: Paint_DrawString_CN() 
-*    Can display Chinese(GB1312)   
-*
-* ----------------------------------------------------------------------------- 
-* V1.0(2018-07-17):
-*   Create library
-*
-* Permission is hereby granted, free of charge, to any person obtaining a copy
-* of this software and associated documnetation files (the "Software"), to deal
-* in the Software without restriction, including without limitation the rights
-* to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-* copies of the Software, and to permit persons to  whom the Software is
-* furished to do so, subject to the following conditions:
-*
-* The above copyright notice and this permission notice shall be included in
-* all copies or substantial portions of the Software.
-*
-* THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-* IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-* FITNESS OR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-* AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-* LIABILITY WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-* OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
-* THE SOFTWARE.
-*
-******************************************************************************/
 #include "GUI_Paint.h"
 #include "DEV_Config.h"
 #include "utility/Debug.h"
@@ -95,22 +18,17 @@ parameter:
 ******************************************************************************/
 void Paint_NewImage(UBYTE *image, UWORD Width, UWORD Height, UWORD Rotate, UWORD Color)
 {
-    Paint.Image = NULL;
     Paint.Image = image;
-
     Paint.WidthMemory = Width;
     Paint.HeightMemory = Height;
-    Paint.Color = Color;    
+    Paint.Color = Color;
     Paint.Scale = 2;
-    Paint.WidthByte = (Width % 8 == 0)? (Width / 8 ): (Width / 8 + 1);
-    Paint.HeightByte = Height;    
-//    printf("WidthByte = %d, HeightByte = %d\r\n", Paint.WidthByte, Paint.HeightByte);
-//    printf(" EPD_WIDTH / 8 = %d\r\n",  122 / 8);
-   
+    Paint.WidthByte = (Width + 7) / 8;
+    Paint.HeightByte = Height;
     Paint.Rotate = Rotate;
     Paint.Mirror = MIRROR_NONE;
-    
-    if(Rotate == ROTATE_0 || Rotate == ROTATE_180) {
+
+    if (Rotate == ROTATE_0 || Rotate == ROTATE_180) {
         Paint.Width = Width;
         Paint.Height = Height;
     } else {
@@ -136,11 +54,10 @@ parameter:
 ******************************************************************************/
 void Paint_SetRotate(UWORD Rotate)
 {
-    if(Rotate == ROTATE_0 || Rotate == ROTATE_90 || Rotate == ROTATE_180 || Rotate == ROTATE_270) {
-        // Debug("Set image Rotate %d\r\n", Rotate);
-        Paint.Rotate = Rotate;
+    if (Rotate != ROTATE_0 && Rotate != ROTATE_90 && Rotate != ROTATE_180 && Rotate != ROTATE_270) {
+        printf("Error: rotate must be 0, 90, 180, or 270\r\n");
     } else {
-        Debug("rotate = 0, 90, 180, 270\r\n");
+        Paint.Rotate = Rotate;
     }
 }
 
@@ -151,33 +68,32 @@ parameter:
 ******************************************************************************/
 void Paint_SetMirroring(UBYTE mirror)
 {
-    if(mirror == MIRROR_NONE || mirror == MIRROR_HORIZONTAL || 
-        mirror == MIRROR_VERTICAL || mirror == MIRROR_ORIGIN) {
-        // Debug("mirror image x:%s, y:%s\r\n",(mirror & 0x01)? "mirror":"none", ((mirror >> 1) & 0x01)? "mirror":"none");
-        Paint.Mirror = mirror;
+    if (mirror != MIRROR_NONE && mirror != MIRROR_HORIZONTAL && 
+        mirror != MIRROR_VERTICAL && mirror != MIRROR_ORIGIN) {
+        printf("Error: mirror must be MIRROR_NONE, MIRROR_HORIZONTAL, MIRROR_VERTICAL, or MIRROR_ORIGIN\r\n");
     } else {
-        Debug("mirror should be MIRROR_NONE, MIRROR_HORIZONTAL, \
-        MIRROR_VERTICAL or MIRROR_ORIGIN\r\n");
-    }    
+        Paint.Mirror = mirror;
+    }
 }
 
 void Paint_SetScale(UBYTE scale)
 {
-    if(scale == 2){
-        Paint.Scale = scale;
-        Paint.WidthByte = (Paint.WidthMemory % 8 == 0)? (Paint.WidthMemory / 8 ): (Paint.WidthMemory / 8 + 1);
-    }
-	else if(scale == 4) {
-        Paint.Scale = scale;
-        Paint.WidthByte = (Paint.WidthMemory % 4 == 0)? (Paint.WidthMemory / 4 ): (Paint.WidthMemory / 4 + 1);
-    }
-	else if(scale == 7) {//Only applicable with 5in65 e-Paper
-		Paint.Scale = 7;
-		Paint.WidthByte = (Paint.WidthMemory % 2 == 0)? (Paint.WidthMemory / 2 ): (Paint.WidthMemory / 2 + 1);
-	}
-	else {
-        Debug("Set Scale Input parameter error\r\n");
-        Debug("Scale Only support: 2 4 7\r\n");
+    switch (scale) {
+        case 2:
+            Paint.Scale = scale;
+            Paint.WidthByte = (Paint.WidthMemory % 8 == 0)? (Paint.WidthMemory / 8 ): (Paint.WidthMemory / 8 + 1);
+            break;
+        case 4:
+            Paint.Scale = scale;
+            Paint.WidthByte = (Paint.WidthMemory % 4 == 0)? (Paint.WidthMemory / 4 ): (Paint.WidthMemory / 4 + 1);
+            break;
+        case 7:
+            Paint.Scale = 7;
+            Paint.WidthByte = (Paint.WidthMemory % 2 == 0)? (Paint.WidthMemory / 2 ): (Paint.WidthMemory / 2 + 1);
+            break;
+        default:
+            printf("Error: scale must be 2, 4, or 7\r\n");
+            break;
     }
 }
 /******************************************************************************
@@ -316,28 +232,27 @@ parameter:
 void Paint_Clear(UWORD Color)
 {
     if(Paint.Scale == 2 || Paint.Scale == 4) {
-		for (UWORD Y = 0; Y < Paint.HeightByte; Y++) {
-			for (UWORD X = 0; X < Paint.WidthByte; X++ ) {//8 pixel =  1 byte
-				UDOUBLE Addr = X + Y*Paint.WidthByte;
-				Paint.Image[Addr] = Color;
-			}
-		}
-	}
-	if(Paint.Scale == 7) {
-		Color = (UBYTE)Color;
-		UWORD Width = (Paint.WidthMemory * 3 % 8 == 0)? (Paint.WidthMemory * 3 / 8 ): (Paint.WidthMemory * 3 / 8 + 1);
-		for (UWORD Y = 0; Y < Paint.HeightByte; Y++) {
-			for (UWORD X = 0; X < Width; X++ ) {
-				UDOUBLE Addr = X + Y * Width;
-				if((X + Y * Width)%3 == 0) 
-					Paint.Image[Addr] = ((Color<<5) | (Color<<2) | (Color>>1));							
-				else if((X + Y * Width)%3 == 1) 
-					Paint.Image[Addr] = ((Color<<7) | (Color<<4) | (Color<<1) | (Color>>2));				
-				else if((X + Y * Width)%3 == 2)
-					Paint.Image[Addr] = ((Color<<6) | (Color<<3) |  Color);				
-			}
-		}
-	}
+        for (UWORD Y = 0; Y < Paint.HeightByte; Y++) {
+            for (UWORD X = 0; X < Paint.WidthByte; X++ ) {
+                UDOUBLE Addr = X + Y*Paint.WidthByte;
+                Paint.Image[Addr] = Color;
+            }
+        }
+    }
+    if(Paint.Scale == 7) {
+        UWORD Width = (Paint.WidthMemory * 3 + 7) / 8;
+        for (UWORD Y = 0; Y < Paint.HeightByte; Y++) {
+            for (UWORD X = 0; X < Width; X++ ) {
+                UDOUBLE Addr = X + Y * Width;
+                if(X % 3 == 0) 
+                    Paint.Image[Addr] = ((Color<<5) | (Color<<2) | (Color>>1));							
+                else if(X % 3 == 1) 
+                    Paint.Image[Addr] = ((Color<<7) | (Color<<4) | (Color<<1) | (Color>>2));				
+                else if(X % 3 == 2)
+                    Paint.Image[Addr] = ((Color<<6) | (Color<<3) |  Color);				
+            }
+        }
+    }
 }
 
 /******************************************************************************
@@ -827,17 +742,8 @@ info:
 ******************************************************************************/
 void Paint_DrawBitMap(const unsigned char* image_buffer)
 {
-    UWORD x, y;
-    UDOUBLE Addr = 0;
-
-    for (y = 0; y < Paint.HeightByte; y++) {
-        for (x = 0; x < Paint.WidthByte; x++) {//8 pixel =  1 byte
-            Addr = x + y * Paint.WidthByte;
-            Paint.Image[Addr] = (unsigned char)image_buffer[Addr];
-        }
-    }
+    memcpy(Paint.Image, image_buffer, Paint.HeightByte * Paint.WidthByte);
 }
-
 /******************************************************************************
 function:	Display image
 parameter:
@@ -849,15 +755,10 @@ parameter:
 ******************************************************************************/
 void Paint_DrawImage(const unsigned char *image_buffer, UWORD xStart, UWORD yStart, UWORD W_Image, UWORD H_Image) 
 {
-    UWORD x, y;
-	UWORD w_byte=(W_Image%8)?(W_Image/8)+1:W_Image/8;
-    UDOUBLE Addr = 0;
-	UDOUBLE pAddr = 0;
-    for (y = 0; y < H_Image; y++) {
-        for (x = 0; x < w_byte; x++) {//8 pixel =  1 byte
-            Addr = x + y * w_byte;
-			pAddr=x+(xStart/8)+((y+yStart)*Paint.WidthByte);
-            Paint.Image[pAddr] = (unsigned char)image_buffer[Addr];
-        }
+    UWORD w_byte = (W_Image + 7) / 8; // Calculate width in bytes
+    for (UWORD y = 0; y < H_Image; y++) {
+        UDOUBLE dest_addr = xStart / 8 + (yStart + y) * Paint.WidthByte;
+        UDOUBLE src_addr = y * w_byte;
+        memcpy(Paint.Image + dest_addr, image_buffer + src_addr, w_byte);
     }
 }
