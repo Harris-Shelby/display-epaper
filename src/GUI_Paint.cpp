@@ -105,62 +105,66 @@ parameter:
 ******************************************************************************/
 void Paint_SetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color)
 {
-    if(Xpoint > Paint.Width || Ypoint > Paint.Height){
-        Debug("Exceeding display boundaries\r\n");
+    static const char* message = "Exceeding display boundaries\r\n";
+
+    if (Xpoint > Paint.Width || Ypoint > Paint.Height) {
+        Debug(message);
         return;
-    }      
+    }
+    
     UWORD X, Y;
     switch(Paint.Rotate) {
-    case 0:
-        X = Xpoint;
-        Y = Ypoint;  
-        break;
-    case 90:
-        X = Paint.WidthMemory - Ypoint - 1;
-        Y = Xpoint;
-        break;
-    case 180:
-        X = Paint.WidthMemory - Xpoint - 1;
-        Y = Paint.HeightMemory - Ypoint - 1;
-        break;
-    case 270:
-        X = Ypoint;
-        Y = Paint.HeightMemory - Xpoint - 1;
-        break;
-    default:
-        return;
+        case 0:
+            X = Xpoint;
+            Y = Ypoint;  
+            break;
+        case 90:
+            X = Paint.WidthMemory - Ypoint - 1;
+            Y = Xpoint;
+            break;
+        case 180:
+            X = Paint.WidthMemory - Xpoint - 1;
+            Y = Paint.HeightMemory - Ypoint - 1;
+            break;
+        case 270:
+            X = Ypoint;
+            Y = Paint.HeightMemory - Xpoint - 1;
+            break;
+        default:
+            return;
     }
     
     switch(Paint.Mirror) {
-    case MIRROR_NONE:
-        break;
-    case MIRROR_HORIZONTAL:
-        X = Paint.WidthMemory - X - 1;
-        break;
-    case MIRROR_VERTICAL:
-        Y = Paint.HeightMemory - Y - 1;
-        break;
-    case MIRROR_ORIGIN:
-        X = Paint.WidthMemory - X - 1;
-        Y = Paint.HeightMemory - Y - 1;
-        break;
-    default:
-        return;
+        case MIRROR_NONE:
+            break;
+        case MIRROR_HORIZONTAL:
+            X = Paint.WidthMemory - X - 1;
+            break;
+        case MIRROR_VERTICAL:
+            Y = Paint.HeightMemory - Y - 1;
+            break;
+        case MIRROR_ORIGIN:
+            X = Paint.WidthMemory - X - 1;
+            Y = Paint.HeightMemory - Y - 1;
+            break;
+        default:
+            return;
     }
 
-    if(X > Paint.WidthMemory || Y > Paint.HeightMemory){
-        Debug("Exceeding display boundaries\r\n");
+    if (X > Paint.WidthMemory || Y > Paint.HeightMemory) {
+        Debug(message);
         return;
     }
     
-    if(Paint.Scale == 2){
+    if (Paint.Scale == 2) {
+        static const UBYTE mask = 0x80;
         UDOUBLE Addr = X / 8 + Y * Paint.WidthByte;
         UBYTE Rdata = Paint.Image[Addr];
         if(Color == BLACK)
-            Paint.Image[Addr] = Rdata & ~(0x80 >> (X % 8));
+            Paint.Image[Addr] = Rdata & ~(mask >> (X % 8));
         else
-            Paint.Image[Addr] = Rdata | (0x80 >> (X % 8));
-    }else if(Paint.Scale == 4){
+            Paint.Image[Addr] = Rdata | (mask>> (X % 8));
+    } else if (Paint.Scale == 4) {
         UDOUBLE Addr = X / 4 + Y * Paint.WidthByte;
         Color = Color % 4;//Guaranteed color scale is 4  --- 0~3
         UBYTE Rdata = Paint.Image[Addr];
@@ -168,60 +172,31 @@ void Paint_SetPixel(UWORD Xpoint, UWORD Ypoint, UWORD Color)
         Rdata = Rdata & (~(0xC0 >> ((X % 4)*2)));
         Paint.Image[Addr] = Rdata | ((Color << 6) >> ((X % 4)*2));
     }else if(Paint.Scale == 7){
-			UWORD Width = Paint.WidthMemory*3%8 == 0 ? Paint.WidthMemory*3/8 : Paint.WidthMemory*3/8+1;
-			UDOUBLE Addr = (Xpoint * 3) / 8 + Ypoint * Width;
-			UBYTE shift, Rdata, Rdata2;
-			shift = (Xpoint+Ypoint*Paint.HeightMemory) % 8;
+        UWORD Width = (Paint.WidthMemory * 3 + 7) / 8;
+        UDOUBLE Addr = (Xpoint * 3) / 8 + Ypoint * Width;
+        UBYTE shift = (Xpoint + Ypoint * Paint.HeightMemory) % 8;
 
-			switch(shift) {
-				case 0 :
-					Rdata = Paint.Image[Addr] & 0x1f;
-					Rdata = Rdata | ((Color << 5) & 0xe0);
-					Paint.Image[Addr] = Rdata;
-					break;
-				case 1 :
-					Rdata = Paint.Image[Addr] & 0xe3;
-					Rdata = Rdata | ((Color << 2) & 0x1c);
-					Paint.Image[Addr] = Rdata;
-					break;
-				case 2 :
-					Rdata = Paint.Image[Addr] & 0xfc;
-					Rdata2 = Paint.Image[Addr + 1] & 0x7f;
-					Rdata = Rdata | ((Color >> 1) & 0x03);
-					Rdata2 = Rdata2 | ((Color << 7) & 0x80);
-					Paint.Image[Addr] = Rdata;
-					Paint.Image[Addr + 1] = Rdata2;
-					break;
-				case 3 :
-					Rdata = Paint.Image[Addr] & 0x8f;
-					Rdata = Rdata | ((Color << 4) & 0x70);
-					Paint.Image[Addr] = Rdata;
-					break;
-				case 4 :
-					Rdata = Paint.Image[Addr] & 0xf1;
-					Rdata = Rdata | ((Color << 1) & 0x0e);
-					Paint.Image[Addr] = Rdata;
-					break;
-				case 5 :
-					Rdata = Paint.Image[Addr] & 0xfe;
-					Rdata2 = Paint.Image[Addr + 1] & 0x3f;
-					Rdata = Rdata | ((Color >> 2) & 0x01);
-					Rdata2 = Rdata2 | ((Color << 6) & 0xc0);
-					Paint.Image[Addr] = Rdata;
-					Paint.Image[Addr + 1] = Rdata2;
-					break;
-				case 6 :
-					Rdata = Paint.Image[Addr] & 0xc7;
-					Rdata = Rdata | ((Color << 3) & 0x38);
-					Paint.Image[Addr] = Rdata;
-					break;
-				case 7 :
-					Rdata = Paint.Image[Addr] & 0xf8;
-					Rdata = Rdata | (Color & 0x07);
-					Paint.Image[Addr] = Rdata;
-					break;						
-			}	
-		}
+        static void (*const func[])(UBYTE*, UBYTE) = {
+            [](UBYTE* data, UBYTE color){*data = (*data & 0x1f) | ((color << 5) & 0xe0);},
+            [](UBYTE* data, UBYTE color){*data = (*data & 0xe3) | ((color << 2) & 0x1c);},
+            [](UBYTE* data, UBYTE color){
+                *data = (*data & 0xfc) | ((color >> 1) & 0x03);
+                *(data + 1) = (*(data + 1) & 0x7f) | ((color << 7) & 0x80);
+            },
+            [](UBYTE* data, UBYTE color){*data = (*data & 0x8f) | ((color << 4) & 0x70);},
+            [](UBYTE* data, UBYTE color){*data = (*data & 0xf1) | ((color << 1) & 0x0e);},
+            [](UBYTE* data, UBYTE color){
+                *data = (*data & 0xfe) | ((color >> 2) & 0x01);
+                *(data + 1) = (*(data + 1) & 0x3f) | ((color << 6) & 0xc0);
+            },
+            [](UBYTE* data, UBYTE color){*data = (*data & 0xc7) | ((color << 3) & 0x38);},
+            [](UBYTE* data, UBYTE color){*data = (*data & 0xf8) | (color & 0x07);}
+        };
+
+        UBYTE* data = Paint.Image + Addr;
+
+        func[shift](data, Color);
+    }
 }
 
 /******************************************************************************
@@ -291,21 +266,19 @@ void Paint_DrawPoint(UWORD Xpoint, UWORD Ypoint, UWORD Color,
         return;
     }
 
-    int16_t XDir_Num , YDir_Num;
-    if (Dot_Style == DOT_FILL_AROUND) {
-        for (XDir_Num = 0; XDir_Num < 2 * Dot_Pixel - 1; XDir_Num++) {
-            for (YDir_Num = 0; YDir_Num < 2 * Dot_Pixel - 1; YDir_Num++) {
-                if(Xpoint + XDir_Num - Dot_Pixel < 0 || Ypoint + YDir_Num - Dot_Pixel < 0)
-                    break;
-                // printf("x = %d, y = %d\r\n", Xpoint + XDir_Num - Dot_Pixel, Ypoint + YDir_Num - Dot_Pixel);
-                Paint_SetPixel(Xpoint + XDir_Num - Dot_Pixel, Ypoint + YDir_Num - Dot_Pixel, Color);
-            }
-        }
-    } else {
-        for (XDir_Num = 0; XDir_Num <  Dot_Pixel; XDir_Num++) {
-            for (YDir_Num = 0; YDir_Num <  Dot_Pixel; YDir_Num++) {
-                Paint_SetPixel(Xpoint + XDir_Num - 1, Ypoint + YDir_Num - 1, Color);
-            }
+    int16_t XDir_Num, YDir_Num, offset_x, offset_y;
+    int16_t start = (Dot_Style == DOT_FILL_AROUND) ? Dot_Pixel - 1 : 0;
+    int16_t end = (Dot_Style == DOT_FILL_AROUND) ? 2 * Dot_Pixel - 1 : Dot_Pixel;
+
+    for (XDir_Num = start; XDir_Num < end; XDir_Num++) {
+        offset_x = Xpoint + XDir_Num - Dot_Pixel;
+        if (offset_x < 0) continue;
+
+        for (YDir_Num = start; YDir_Num < end; YDir_Num++) {
+            offset_y = Ypoint + YDir_Num - Dot_Pixel;
+            if (offset_y < 0) break;
+
+            Paint_SetPixel(offset_x, offset_y, Color);
         }
     }
 }
@@ -321,8 +294,8 @@ parameter:
     Line_width : Line width
     Line_Style: Solid and dotted lines
 ******************************************************************************/
-void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
-                    UWORD Color, DOT_PIXEL Line_width, LINE_STYLE Line_Style)
+void Paint_DrawLine(const UWORD Xstart, const UWORD Ystart, const UWORD Xend, const UWORD Yend,
+                    const UWORD Color, const DOT_PIXEL Line_width, const LINE_STYLE Line_Style)
 {
     if (Xstart > Paint.Width || Ystart > Paint.Height ||
         Xend > Paint.Width || Yend > Paint.Height) {
@@ -330,43 +303,67 @@ void Paint_DrawLine(UWORD Xstart, UWORD Ystart, UWORD Xend, UWORD Yend,
         return;
     }
 
-    UWORD Xpoint = Xstart;
-    UWORD Ypoint = Ystart;
-    int dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart : Xstart - Xend;
-    int dy = (int)Yend - (int)Ystart <= 0 ? Yend - Ystart : Ystart - Yend;
+    static UWORD Xpoint, Ypoint;
+    static int dx, dy, XAddway, YAddway, Esp;
+    static char Dotted_Len;
+
+    Xpoint = Xstart;
+    Ypoint = Ystart;
+    dx = (int)Xend - (int)Xstart >= 0 ? Xend - Xstart : Xstart - Xend;
+    dy = (int)Yend - (int)Ystart <= 0 ? Yend - Ystart : Ystart - Yend;
 
     // Increment direction, 1 is positive, -1 is counter;
-    int XAddway = Xstart < Xend ? 1 : -1;
-    int YAddway = Ystart < Yend ? 1 : -1;
+    XAddway = Xstart < Xend ? 1 : -1;
+    YAddway = Ystart < Yend ? 1 : -1;
 
     //Cumulative error
-    int Esp = dx + dy;
-    char Dotted_Len = 0;
+    Esp = dx + dy;
+    Dotted_Len = 0;
 
-    for (;;) {
-        Dotted_Len++;
-        //Painted dotted line, 2 point is really virtual
-        if (Line_Style == LINE_STYLE_DOTTED && Dotted_Len % 3 == 0) {
-            //Debug("LINE_DOTTED\r\n");
-            Paint_DrawPoint(Xpoint, Ypoint, IMAGE_BACKGROUND, Line_width, DOT_STYLE_DFT);
-            Dotted_Len = 0;
-        } else {
-            Paint_DrawPoint(Xpoint, Ypoint, Color, Line_width, DOT_STYLE_DFT);
-        }
-        if (2 * Esp >= dy) {
-            if (Xpoint == Xend)
-                break;
-            Esp += dy;
-            Xpoint += XAddway;
-        }
-        if (2 * Esp <= dx) {
-            if (Ypoint == Yend)
-                break;
-            Esp += dx;
-            Ypoint += YAddway;
-        }
+    switch (Line_Style) {
+        case LINE_STYLE_SOLID:
+            for (;;) {
+                Paint_DrawPoint(Xpoint, Ypoint, Color, Line_width, DOT_STYLE_DFT);
+                if (Xpoint == Xend && Ypoint == Yend) break;
+                int e2 = 2 * Esp;
+                if (e2 >= dy) {
+                    Esp += dy;
+                    Xpoint += XAddway;
+                }
+                if (e2 <= dx) {
+                    Esp += dx;
+                    Ypoint += YAddway;
+                }
+            }
+            break;
+        case LINE_STYLE_DOTTED:
+            for (;;) {
+                ++Dotted_Len;
+                //Painted dotted line, 2 point is really virtual
+                if (Dotted_Len % 3 == 0) {
+                    Paint_DrawPoint(Xpoint, Ypoint, IMAGE_BACKGROUND, Line_width, DOT_STYLE_DFT);
+                    Dotted_Len = 0;
+                } else {
+                    Paint_DrawPoint(Xpoint, Ypoint, Color, Line_width, DOT_STYLE_DFT);
+                }
+                if (Xpoint == Xend && Ypoint == Yend) break;
+                int e2 = 2 * Esp;
+                if (e2 >= dy) {
+                    Esp += dy;
+                    Xpoint += XAddway;
+                }
+                if (e2 <= dx) {
+                    Esp += dx;
+                    Ypoint += YAddway;
+                }
+            }
+            break;
+        default:
+            Debug("Paint_DrawLine: invalid line style\r\n");
+            break;
     }
 }
+
 
 /******************************************************************************
 function: Draw a rectangle

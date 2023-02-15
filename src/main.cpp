@@ -150,7 +150,6 @@ void setup()
     Paint_DrawString_CN(130, 0,"你好abc", &Font12CN, BLACK, WHITE);
     Paint_DrawString_CN(130, 20, "微雪电子", &Font24CN, WHITE, BLACK);
 
-
     EPD_2IN9_Display(blackImage);
     DEV_Delay_ms(2000);
 #endif
