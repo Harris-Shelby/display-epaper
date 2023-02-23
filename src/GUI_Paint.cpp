@@ -618,7 +618,7 @@ void Paint_DrawString_CN(UWORD Xstart, UWORD Ystart, const char * pString, cFONT
             /* Decrement the column position by 16 */
             x += font->ASCII_Width;
         } else {        //Chinese
-            for(Num = 0; Num < font->size; Num++) {
+            for (Num = 0; Num < font->size; Num++) {
                 if ((*p_text == font->table[Num].index[0]) && \
                     (*(p_text + 1) == font->table[Num].index[1]) && \
                     (*(p_text + 2) == font->table[Num].index[2])) {
@@ -626,20 +626,9 @@ void Paint_DrawString_CN(UWORD Xstart, UWORD Ystart, const char * pString, cFONT
 
                     for (j = 0; j < font->Height; j++) {
                         for (i = 0; i < font->Width; i++) {
-                            if (FONT_BACKGROUND == Color_Background) { //this process is to speed up the scan
-                                if (*ptr & (0x80 >> (i % 8))) {
-                                    Paint_SetPixel(x + i, y + j, Color_Foreground);
-                                    // Paint_DrawPoint(x + i, y + j, Color_Foreground, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-                                }
-                            } else {
-                                if (*ptr & (0x80 >> (i % 8))) {
-                                    Paint_SetPixel(x + i, y + j, Color_Foreground);
-                                    // Paint_DrawPoint(x + i, y + j, Color_Foreground, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-                                } else {
-                                    Paint_SetPixel(x + i, y + j, Color_Background);
-                                    // Paint_DrawPoint(x + i, y + j, Color_Background, DOT_PIXEL_DFT, DOT_STYLE_DFT);
-                                }
-                            }
+                            uint32_t color = (*ptr & (0x80 >> (i % 8))) ? Color_Foreground : Color_Background;
+                            Paint_SetPixel(x + i, y + j, color);
+                            // Paint_DrawPoint(x + i, y + j, color, DOT_PIXEL_DFT, DOT_STYLE_DFT);
                             if (i % 8 == 7) {
                                 ptr++;
                             }
@@ -669,14 +658,14 @@ parameter:
     Color_Foreground : Select the foreground color
     Color_Background : Select the background color
 ******************************************************************************/
-#define  ARRAY_LEN 255
+const int ARRAY_LEN = 255;
+
 void Paint_DrawNum(UWORD Xpoint, UWORD Ypoint, int32_t Nummber,
                    sFONT* Font, UWORD Color_Foreground, UWORD Color_Background)
 {
-
     int16_t Num_Bit = 0, Str_Bit = 0;
     uint8_t Str_Array[ARRAY_LEN] = {0}, Num_Array[ARRAY_LEN] = {0};
-    uint8_t *pStr = Str_Array;
+    const uint8_t* pStr = Str_Array;
 
     if (Xpoint > Paint.Width || Ypoint > Paint.Height) {
         Debug("Paint_DisNum Input exceeds the normal display range\r\n");
@@ -714,20 +703,19 @@ parameter:
 void Paint_DrawTime(UWORD Xstart, UWORD Ystart, PAINT_TIME *pTime, sFONT* Font,
                     UWORD Color_Foreground, UWORD Color_Background)
 {
-    uint8_t value[10] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
-
     UWORD Dx = Font->Width;
 
-    //Write data into the cache
-    Paint_DrawChar(Xstart                           , Ystart, value[pTime->Hour / 10], Font, Color_Background, Color_Foreground);
-    Paint_DrawChar(Xstart + Dx                      , Ystart, value[pTime->Hour % 10], Font, Color_Background, Color_Foreground);
+    // Write data into the cache
+    Paint_DrawChar(Xstart                           , Ystart, '0' + pTime->Hour / 10, Font, Color_Background, Color_Foreground);
+    Paint_DrawChar(Xstart + Dx                      , Ystart, '0' + pTime->Hour % 10, Font, Color_Background, Color_Foreground);
     Paint_DrawChar(Xstart + Dx  + Dx / 4 + Dx / 2   , Ystart, ':'                    , Font, Color_Background, Color_Foreground);
-    Paint_DrawChar(Xstart + Dx * 2 + Dx / 2         , Ystart, value[pTime->Min / 10] , Font, Color_Background, Color_Foreground);
-    Paint_DrawChar(Xstart + Dx * 3 + Dx / 2         , Ystart, value[pTime->Min % 10] , Font, Color_Background, Color_Foreground);
+    Paint_DrawChar(Xstart + Dx * 2 + Dx / 2         , Ystart, '0' + (pTime->Min / 10) % 10, Font, Color_Background, Color_Foreground);
+    Paint_DrawChar(Xstart + Dx * 3 + Dx / 2         , Ystart, '0' + pTime->Min % 10, Font, Color_Background, Color_Foreground);
     Paint_DrawChar(Xstart + Dx * 4 + Dx / 2 - Dx / 4, Ystart, ':'                    , Font, Color_Background, Color_Foreground);
-    Paint_DrawChar(Xstart + Dx * 5                  , Ystart, value[pTime->Sec / 10] , Font, Color_Background, Color_Foreground);
-    Paint_DrawChar(Xstart + Dx * 6                  , Ystart, value[pTime->Sec % 10] , Font, Color_Background, Color_Foreground);
+    Paint_DrawChar(Xstart + Dx * 5                  , Ystart, '0' + pTime->Sec / 10, Font, Color_Background, Color_Foreground);
+    Paint_DrawChar(Xstart + Dx * 6                  , Ystart, '0' + pTime->Sec % 10, Font, Color_Background, Color_Foreground);
 }
+
 
 /******************************************************************************
 function:	Display monochrome bitmap

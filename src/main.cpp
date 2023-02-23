@@ -109,7 +109,6 @@ void setup()
     EPD_2IN9_Clear();
     DEV_Delay_ms(1000);
     RetrieveAllIds();
-    // DEV_Delay_ms(1000);
  
 #if 1   //show image for array  
     Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
@@ -164,20 +163,10 @@ void setup()
     sPaint_time.Sec = 56;
     UBYTE num = 20;
     for (;;) {
-        sPaint_time.Sec = sPaint_time.Sec + 1;
-        if (sPaint_time.Sec == 60) {
-            sPaint_time.Min = sPaint_time.Min + 1;
-            sPaint_time.Sec = 0;
-            if (sPaint_time.Min == 60) {
-                sPaint_time.Hour =  sPaint_time.Hour + 1;
-                sPaint_time.Min = 0;
-                if (sPaint_time.Hour == 24) {
-                    sPaint_time.Hour = 0;
-                    sPaint_time.Min = 0;
-                    sPaint_time.Sec = 0;
-                }
-            }
-        }
+        sPaint_time.Sec = (sPaint_time.Sec + 1) % 60;
+        sPaint_time.Min = (sPaint_time.Min + (sPaint_time.Sec == 0)) % 60;
+        sPaint_time.Hour = (sPaint_time.Hour + (sPaint_time.Min == 0 && sPaint_time.Sec == 0)) % 24;
+
         Paint_ClearWindows(150, 80, 150 + Font20.Width * 7, 80 + Font20.Height, WHITE);
         Paint_DrawTime(150, 80, &sPaint_time, &Font20, WHITE, BLACK);
 
@@ -203,18 +192,9 @@ void setup()
 /* The main loop -------------------------------------------------------------*/
 void loop()
 {
-    // DEV_Delay_ms(6000);
-    // EPD_2IN9_Init(EPD_2IN9_PART);
-    // getEpaperImgData();
-    // Paint_SelectImage(blackImage);
-    // // Paint_Clear(WHITE);
-    // Paint_DrawBitMap(buffer);
-    // EPD_2IN9_Display(blackImage);    
-
     for (int i = 0; i < totalImages; i++)
     {
-        /* code */
-        if(i % 5 == 0) {
+        if(i % 1 == 0) {
                 EPD_2IN9_Init(EPD_2IN9_FULL);
         } else {
                 EPD_2IN9_Init(EPD_2IN9_PART);
@@ -225,9 +205,8 @@ void loop()
         Paint_DrawBitMap(buffer);
 
         EPD_2IN9_Display(blackImage);
-        DEV_Delay_ms(2000);
+        EPD_2IN9_Sleep();
+        DEV_Delay_ms(300000);
     }
-//   while(1);
     RetrieveAllIds();
-    delay(1000);
 }
