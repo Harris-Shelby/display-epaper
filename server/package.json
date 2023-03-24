@@ -10,9 +10,19 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "bmp-js": "^0.1.0",
+    "canvas": "^2.11.0",
+    "fontkit": "^2.0.2",
+    "freetype2": "^1.0.6",
+    "fs": "0.0.1-security",
+    "fss": "^1.0.0",
     "get-pixels": "^3.3.3",
+    "jimp": "^0.22.5",
     "png-to-lcd": "^1.1.0",
     "pngjs": "^6.0.0",
-    "sharp": "^0.31.1"
+    "sharp": "^0.31.1",
+    "svg-path-bounding-box": "^1.0.4",
+    "svg2img": "^1.0.0-beta.2",
+    "text-to-svg": "^3.1.5"
   }
 }

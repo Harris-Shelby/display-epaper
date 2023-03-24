@@ -3,8 +3,11 @@ const floydSteinberg = require("floyd-steinberg");
 const sharp = require("sharp");
 const PNG = require("pngjs").PNG;
 const getPixels = require("get-pixels");
+const { stringify } = require("querystring");
 
-formatImgData("./cpp.jpg");
+formatImgData(
+  "/Users/weilaibushimeng/Documents/PlatformIO/Projects/display-epaper/server/cdd.png"
+);
 
 async function formatImgData(originImageUrl) {
   try {
@@ -14,20 +17,20 @@ async function formatImgData(originImageUrl) {
         height: 296,
       })
       .toFormat("jpeg")
-      .png({ quality: 90 })
+      .png({ quality: 100 })
       .toFile(`./sharpImg.png`);
 
-    let OriginImgData = fs.readFileSync("./sharpImg.png");
-    let pngImgData = PNG.sync.read(OriginImgData);
-    let ditherImage = floydSteinberg(pngImgData);
-    let buffer = PNG.sync.write(ditherImage);
+    // let OriginImgData = fs.readFileSync("./sharpImg.png");
+    // let pngImgData = PNG.sync.read(OriginImgData);
+    // let ditherImage = floydSteinberg(pngImgData);
+    // let buffer = PNG.sync.write(ditherImage);
 
-    fs.writeFileSync("./ditherImg.png", buffer);
+    // fs.writeFileSync("./ditherImg.png", buffer);
 
-    let pixelImgData = await getPixelsPro("./ditherImg.png");
+    let pixelImgData = await getPixelsPro("./sharpImg.png");
     let RGBAImgData = await formatRGBAs(pixelImgData);
     let b = [];
-    let c = [];
+    let c = "";
     RGBAImgData.forEach((e, i) => {
       if (`${e.join("")}` === "1111") {
         b.push(1);
@@ -37,20 +40,23 @@ async function formatImgData(originImageUrl) {
     });
     let BinImgData = group(b, 8);
     BinImgData.forEach((e, i) => {
-      let bind = `${e[0]}${e[1]}${e[2]}${e[3]}${e[4]}${e[5]}${e[6]}${e[7]}`;
-      // let newBre = setHex(bre);
-      // let newPre = setHex(pre);
-      let NewBind = setBind(bind);
-      c.push(NewBind);
+      let bre = `${e[0]}${e[1]}${e[2]}${e[3]}`;
+      let pre = `${e[4]}${e[5]}${e[6]}${e[7]}`;
+      let newBre = setHex(bre);
+      let newPre = setHex(pre);
+      c += `0X${newBre}${newPre},`;
+      if ((i + 1) % 16 === 0) c += "\n";
+      return;
     });
-    console.log(c);
-    // fs.writeFile(__dirname + "/out.txt", c, { flag: "w" }, function (err) {
-    //   if (err) {
-    //     console.error(err);
-    //   } else {
-    //     console.log("写入成功");
-    //   }
-    // });
+    // console.log(c);
+
+    fs.writeFile(__dirname + "/out.txt", c, { flag: "w" }, function (err) {
+      if (err) {
+        console.error(err);
+      } else {
+        console.log("写入成功");
+      }
+    });
   } catch (error) {
     console.log(error);
   }
@@ -69,7 +75,7 @@ const formatRGBAs = (imagePixel) => {
   return new Promise((resolve, reject) => {
     if (!imagePixel) reject("Bad image pixels");
     let a = imagePixel.map((e) => {
-      if (e === 255) return 1;
+      if (e >= 200) return 1;
       return 0;
     });
     let b = group(a, 4);

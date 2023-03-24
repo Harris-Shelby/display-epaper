@@ -4,6 +4,7 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include "../lib/ArduinoJson/ArduinoJson.h"
+#include "imagedata.h"
 
 #define JSON_BUFFER_SIZE 12 * 1024
 #define NUM_BUFFER_SIZE 2 * 1024
@@ -15,7 +16,7 @@ const int IMAGE_SIZE = ((EPD_2IN9_WIDTH % 8 == 0) ? (EPD_2IN9_WIDTH / 8) : (EPD_
 unsigned char buffer[IMAGE_SIZE];
 const char *imageIds[NUM_IMAGES_LIMIT];
 int totalImages;
-const char *ids_url = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'"; 
+const char *ids_url = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'";
 const char *img_url = "http://45.88.179.159:4000/api/v1/EpaperImg/"; 
 
 unsigned char blackImage[IMAGE_SIZE];
@@ -104,10 +105,22 @@ void getEpaperImgData(const char* id)
 void setup()
 {
     DEV_Module_Init();
-    connectToWiFi(ssid, password);
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
     DEV_Delay_ms(1000);
+#if 1   //show image for array  
+    Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
+    printf("show image for array\r\n");
+    Paint_SelectImage(blackImage);
+#endif
+
+#if 1   //show image for array  
+    // Paint_Clear(WHITE);
+    Paint_DrawBitMap(gImage_2in9);
+    EPD_2IN9_Display(blackImage);
+    DEV_Delay_ms(20000);
+#endif
+    connectToWiFi(ssid, password);
     RetrieveAllIds();
  
 #if 1   //show image for array  
@@ -206,7 +219,7 @@ void loop()
 
         EPD_2IN9_Display(blackImage);
         EPD_2IN9_Sleep();
-        DEV_Delay_ms(300000);
+        DEV_Delay_ms(600000);
     }
     RetrieveAllIds();
 }

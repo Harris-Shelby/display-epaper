@@ -235,4 +235,4 @@
  src/../lib/ArduinoJson/ArduinoJson.h \
  src/../lib/ArduinoJson/src/ArduinoJson.h \
  src/../lib/ArduinoJson/src/ArduinoJson.hpp \
- src/../lib/ArduinoJson/src/ArduinoJson/Configuration.hpp
+ src/../lib/ArduinoJson/src/ArduinoJson/Configuration.hpp src/imagedata.h
