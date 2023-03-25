@@ -75,7 +75,7 @@ const formatRGBAs = (imagePixel) => {
   return new Promise((resolve, reject) => {
     if (!imagePixel) reject("Bad image pixels");
     let a = imagePixel.map((e) => {
-      if (e >= 200) return 1;
+      if (e >= 190) return 1;
       return 0;
     });
     let b = group(a, 4);
