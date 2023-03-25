@@ -9,6 +9,7 @@
 #define JSON_BUFFER_SIZE 12 * 1024
 #define NUM_BUFFER_SIZE 2 * 1024
 #define NUM_IMAGES_LIMIT 200 // assuming there won't be more than 200 images
+#define NUM_NETWORKS_LIMIT 7
 
 DynamicJsonDocument idJsonDocument(JSON_BUFFER_SIZE);
 DynamicJsonDocument imageJsonDocument(NUM_BUFFER_SIZE);
@@ -24,6 +25,51 @@ const char *status = NULL;
 
 const char *ssid = "GL-MT1300-08c"; //"your ssid";
 const char *password = "goodlife";   //"your password";
+
+String wifiList[NUM_NETWORKS_LIMIT];
+
+void scanWiFi() {
+    // Create a new image and select it for drawing
+    Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 90, WHITE);  
+    Paint_SelectImage(blackImage);
+
+    // Draw the bitmap image to the display
+    Paint_DrawBitMap(gImage_2in9);
+    EPD_2IN9_Display(blackImage);
+
+    // Initialize the e-paper partly display
+    EPD_2IN9_Init(EPD_2IN9_PART);
+    Paint_SelectImage(blackImage);
+
+    // Scan for available Wi-Fi networks
+    int numOfNetworks = WiFi.scanNetworks();
+    int maxLen = 15;
+
+    if (numOfNetworks == 0) {
+        Paint_DrawString_EN(195, 70 , "No networks found", &Font12, WHITE, BLACK);
+    } 
+    else {
+        // Limit the number of displayed networks to 7
+        if (numOfNetworks > 7) {
+            numOfNetworks = 7;
+        }
+        // Display the SSIDs of the available networks on the e-paper display
+        for (int i = 0; i < numOfNetworks; i++) {
+            String ssidStr = String(i + 1) + ":" + WiFi.SSID(i);
+            wifiList[i]= WiFi.SSID(i);
+            if (ssidStr.length() > maxLen) {
+                ssidStr = ssidStr.substring(0, maxLen);
+            }
+            const char* ssid = ssidStr.c_str();
+            Paint_DrawString_EN(190, 35 + i * 12, ssid, &Font12, WHITE, BLACK);
+        }
+    }
+    // Update the e-paper display with the new image
+    EPD_2IN9_Display(blackImage);
+
+    // Delay for 2 seconds before proceeding
+    DEV_Delay_ms(2000);
+}
 
 void connectToWiFi(const char *ssid, const char *password) {
    WiFi.begin(ssid, password);
@@ -105,29 +151,15 @@ void getEpaperImgData(const char* id)
 void setup()
 {
     DEV_Module_Init();
+    // Initialize the e-paper display
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
-    DEV_Delay_ms(1000);
-#if 1   //show image for array  
-    Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
-    printf("show image for array\r\n");
-    Paint_SelectImage(blackImage);
-#endif
 
-#if 1   //show image for array  
-    // Paint_Clear(WHITE);
-    Paint_DrawBitMap(gImage_2in9);
-    EPD_2IN9_Display(blackImage);
-    DEV_Delay_ms(20000);
-#endif
+
+    scanWiFi();
+
     connectToWiFi(ssid, password);
     RetrieveAllIds();
- 
-#if 1   //show image for array  
-    Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 270, WHITE);  
-    printf("show image for array\r\n");
-    Paint_SelectImage(blackImage);
-#endif
 
 #if 1   // Drawing on the image
     printf("Drawing\r\n");
