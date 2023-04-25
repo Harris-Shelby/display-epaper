@@ -191,6 +191,7 @@
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiUdp.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/cores/esp32/Udp.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/cores/esp32/cbuf.h \
+ /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/EEPROM/src/EEPROM.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/HTTPClient/src/HTTPClient.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WiFi/src/WiFiClient.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WiFiClientSecure/src/WiFiClientSecure.h \
@@ -232,6 +233,11 @@
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/mbedtls/port/include/aes/esp_aes.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/hal/include/hal/aes_types.h \
  /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/mbedtls/mbedtls/include/mbedtls/error.h \
+ /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/WebServer.h \
+ /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/HTTP_Method.h \
+ /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/tools/sdk/esp32/include/nghttp/port/include/http_parser.h \
+ /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/Uri.h \
+ /Users/weilaibushimeng/.platformio/packages/framework-arduinoespressif32/libraries/WebServer/src/detail/RequestHandler.h \
  src/../lib/ArduinoJson/ArduinoJson.h \
  src/../lib/ArduinoJson/src/ArduinoJson.h \
  src/../lib/ArduinoJson/src/ArduinoJson.hpp \

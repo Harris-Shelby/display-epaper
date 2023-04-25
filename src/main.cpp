@@ -2,7 +2,9 @@
 #include "EPD.h"
 #include "GUI_Paint.h"
 #include <WiFi.h>
+#include <EEPROM.h>
 #include <HTTPClient.h>
+#include <WebServer.h>
 #include "../lib/ArduinoJson/ArduinoJson.h"
 #include "imagedata.h"
 
@@ -17,16 +19,78 @@ const int IMAGE_SIZE = ((EPD_2IN9_WIDTH % 8 == 0) ? (EPD_2IN9_WIDTH / 8) : (EPD_
 unsigned char buffer[IMAGE_SIZE];
 const char *imageIds[NUM_IMAGES_LIMIT];
 int totalImages;
-const char *ids_url = "http://45.88.179.159:4000/api/v1/EpaperImg?fields='id'";
-const char *img_url = "http://45.88.179.159:4000/api/v1/EpaperImg/"; 
+const char *ids_url = "http://140.99.43.159:4400/api/v1/EpaperImg?fields='id'";
+const char *img_url = "http://140.99.43.159:4400/api/v1/EpaperImg/"; 
 
 unsigned char blackImage[IMAGE_SIZE];
 const char *status = NULL; 
 
-const char *ssid = "GL-MT1300-08c"; //"your ssid";
-const char *password = "goodlife";   //"your password";
+const int EEPROM_SIZE = 512;
+const char* AP_SSID = "ESP32-AP";
+const char* AP_PASSWORD = "12291229";
+int wifiCount;
 
-String wifiList[NUM_NETWORKS_LIMIT];
+WebServer server(80);
+
+void connectToWiFi(const char *ssid, const char *password) {
+    WiFi.begin(ssid, password);
+    Serial.println("Connecting to " + (String)ssid);
+    while (WiFi.status() != WL_CONNECTED) {
+        delay(300);
+        Serial.print(".");
+    }
+    Serial.println("WiFi connected");
+    Serial.println("IP address: " + WiFi.localIP().toString());
+}
+
+void handleRoot() {
+  String html = "<html><head><title>ESP32 Wi-Fi Configuration</title></head><body>";
+  html += "<h1>ESP32 Wi-Fi Configuration</h1>";
+  html += "<form method=\"post\" action=\"/submit\">";
+  html += "<label for=\"ssid\">Wi-Fi SSID:</label><br/>";
+  html += "<input type=\"text\" id=\"ssid\" name=\"ssid\"><br/>";
+  html += "<label for=\"password\">Wi-Fi Password:</label><br/>";
+  html += "<input type=\"password\" id=\"password\" name=\"password\"><br/>";
+  html += "<input type=\"submit\" value=\"Submit\">";
+  html += "</form>";
+  html += "</body></html>";
+
+  server.send(200, "text/html", html);
+}
+
+void handleWifiConfig() {
+    String ssid = server.arg("ssid");
+    String password = server.arg("password");
+    if (ssid != "" && password != "") {
+        Serial.printf("Wi-Fi SSID: %s\n", ssid.c_str());
+        Serial.printf("Wi-Fi password: %s\n", password.c_str());
+        int addr = wifiCount * 64;  
+        EEPROM.put(addr, ssid);
+        EEPROM.put(addr + 32, password);
+        wifiCount++;
+        EEPROM.put(0, wifiCount);
+        EEPROM.commit();
+        EEPROM.end();
+
+        String message = "Wi-Fi credentials saved. Restarting...";
+        server.send(200, "text/plain", message);
+        delay(2000);
+        ESP.restart();
+    }
+}
+
+void startAP() {
+  WiFi.softAP(AP_SSID, AP_PASSWORD);
+  byte ip[] = {192, 168, 4, 1};
+  byte gateway[] = {192, 168, 4, 1}; 
+  byte subnet[] = {255, 255, 255, 0};
+  WiFi.softAPConfig(ip, gateway, subnet);
+  Serial.println("Access point started.");
+  // Start the web server
+  server.on("/", handleRoot);
+  server.on("/submit", handleWifiConfig);
+  server.begin();
+}
 
 void scanWiFi() {
     // Create a new image and select it for drawing
@@ -56,7 +120,6 @@ void scanWiFi() {
         // Display the SSIDs of the available networks on the e-paper display
         for (int i = 0; i < numOfNetworks; i++) {
             String ssidStr = String(i + 1) + ":" + WiFi.SSID(i);
-            wifiList[i]= WiFi.SSID(i);
             if (ssidStr.length() > maxLen) {
                 ssidStr = ssidStr.substring(0, maxLen);
             }
@@ -69,18 +132,33 @@ void scanWiFi() {
 
     // Delay for 2 seconds before proceeding
     DEV_Delay_ms(2000);
+
+    for (int z = 0; z < numOfNetworks; z++) {
+        // 读取EEPROM中WIFI信息并连接
+        for (int i = 0; i < wifiCount; i++) {
+            int addr = i * 64;
+            String ssid;
+            ssid.reserve(33);
+            for (int j = 0; j < 32; j++) {
+                ssid += char(EEPROM.read(addr++));
+            }
+            String password;
+            password.reserve(33);
+            for (int j = 0; j < 32; j++) {
+                password += char(EEPROM.read(addr++));
+            }
+            if (strcmp(ssid.c_str(), WiFi.SSID(z).c_str()) == 0) {
+                connectToWiFi(ssid.c_str(), password.c_str());
+                return;  // 连接成功后返回
+            } 
+        }
+    }
+    
+  if (WiFi.status() != WL_CONNECTED) {  
+    startAP();                     
+  } 
 }
 
-void connectToWiFi(const char *ssid, const char *password) {
-   WiFi.begin(ssid, password);
-   Serial.println("Connecting to " + (String)ssid);
-   while (WiFi.status() != WL_CONNECTED) {
-       delay(300);
-       Serial.print(".");
-   }
-   Serial.println("WiFi connected");
-   Serial.println("IP address: " + WiFi.localIP().toString());
-} 
 
 void RetrieveAllIds()
 {
@@ -154,11 +232,10 @@ void setup()
     // Initialize the e-paper display
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
-
-
+    EEPROM.begin(EEPROM_SIZE);
+    wifiCount = EEPROM.read(0);
     scanWiFi();
-
-    connectToWiFi(ssid, password);
+    return;
     RetrieveAllIds();
 
 #if 1   // Drawing on the image
@@ -237,21 +314,26 @@ void setup()
 /* The main loop -------------------------------------------------------------*/
 void loop()
 {
-    for (int i = 0; i < totalImages; i++)
-    {
-        if(i % 1 == 0) {
-                EPD_2IN9_Init(EPD_2IN9_FULL);
-        } else {
-                EPD_2IN9_Init(EPD_2IN9_PART);
+    server.handleClient();
+    if (WiFi.status() == WL_CONNECTED) {  
+        for (int i = 0; i < totalImages; i++){
+            if(i % 1 == 0) {
+                    EPD_2IN9_Init(EPD_2IN9_FULL);
+            } else {
+                    EPD_2IN9_Init(EPD_2IN9_PART);
+            }
+            getEpaperImgData(imageIds[i]);
+            Paint_Clear(WHITE);
+
+            Paint_DrawBitMap(buffer);
+
+            EPD_2IN9_Display(blackImage);
+            EPD_2IN9_Sleep();
+            DEV_Delay_ms(60000);
         }
-        getEpaperImgData(imageIds[i]);
-        Paint_Clear(WHITE);
-
-        Paint_DrawBitMap(buffer);
-
-        EPD_2IN9_Display(blackImage);
-        EPD_2IN9_Sleep();
-        DEV_Delay_ms(600000);
-    }
-    RetrieveAllIds();
+        RetrieveAllIds();     
+    } 
+    
 }
+
+
