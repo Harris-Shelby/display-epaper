@@ -44,18 +44,18 @@ void connectToWiFi(const char *ssid, const char *password) {
 }
 
 void handleRoot() {
-  String html = "<html><head><title>ESP32 Wi-Fi Configuration</title></head><body>";
-  html += "<h1>ESP32 Wi-Fi Configuration</h1>";
-  html += "<form method=\"post\" action=\"/submit\">";
-  html += "<label for=\"ssid\">Wi-Fi SSID:</label><br/>";
-  html += "<input type=\"text\" id=\"ssid\" name=\"ssid\"><br/>";
-  html += "<label for=\"password\">Wi-Fi Password:</label><br/>";
-  html += "<input type=\"password\" id=\"password\" name=\"password\"><br/>";
-  html += "<input type=\"submit\" value=\"Submit\">";
-  html += "</form>";
-  html += "</body></html>";
+    String html = "<html><head><title>ESP32 Wi-Fi Configuration</title></head><body>";
+    html += "<h1>ESP32 Wi-Fi Configuration</h1>";
+    html += "<form method=\"post\" action=\"/submit\">";
+    html += "<label for=\"ssid\">Wi-Fi SSID:</label><br/>";
+    html += "<input type=\"text\" id=\"ssid\" name=\"ssid\"><br/>";
+    html += "<label for=\"password\">Wi-Fi Password:</label><br/>";
+    html += "<input type=\"password\" id=\"password\" name=\"password\"><br/>";
+    html += "<input type=\"submit\" value=\"Submit\">";
+    html += "</form>";
+    html += "</body></html>";
 
-  server.send(200, "text/html", html);
+    server.send(200, "text/html", html);
 }
 
 void handleWifiConfig() {
@@ -80,83 +80,64 @@ void handleWifiConfig() {
 }
 
 void startAP() {
-  WiFi.softAP(AP_SSID, AP_PASSWORD);
-  byte ip[] = {192, 168, 4, 1};
-  byte gateway[] = {192, 168, 4, 1}; 
-  byte subnet[] = {255, 255, 255, 0};
-  WiFi.softAPConfig(ip, gateway, subnet);
-  Serial.println("Access point started.");
-  // Start the web server
-  server.on("/", handleRoot);
-  server.on("/submit", handleWifiConfig);
-  server.begin();
+    WiFi.softAP(AP_SSID, AP_PASSWORD);
+    byte ip[] = {192, 168, 4, 1};
+    byte gateway[] = {192, 168, 4, 1}; 
+    byte subnet[] = {255, 255, 255, 0};
+    WiFi.softAPConfig(ip, gateway, subnet);
+    Serial.println("Access point started.");
+
+    server.on("/", handleRoot);
+    server.on("/submit", handleWifiConfig);
+    server.begin();
 }
 
 void scanWiFi() {
-    // Create a new image and select it for drawing
     Paint_NewImage(blackImage, EPD_2IN9_WIDTH, EPD_2IN9_HEIGHT, 90, WHITE);  
     Paint_SelectImage(blackImage);
-
-    // Draw the bitmap image to the display
     Paint_DrawBitMap(gImage_2in9);
     EPD_2IN9_Display(blackImage);
 
-    // Initialize the e-paper partly display
     EPD_2IN9_Init(EPD_2IN9_PART);
     Paint_SelectImage(blackImage);
 
-    // Scan for available Wi-Fi networks
-    int numOfNetworks = WiFi.scanNetworks();
-    int maxLen = 15;
+    int n = WiFi.scanNetworks();
 
-    if (numOfNetworks == 0) {
+    if (n == 0) {
         Paint_DrawString_EN(195, 70 , "No networks found", &Font12, WHITE, BLACK);
-    } 
-    else {
-        // Limit the number of displayed networks to 7
-        if (numOfNetworks > 7) {
-            numOfNetworks = 7;
-        }
-        // Display the SSIDs of the available networks on the e-paper display
-        for (int i = 0; i < numOfNetworks; i++) {
-            String ssidStr = String(i + 1) + ":" + WiFi.SSID(i);
-            if (ssidStr.length() > maxLen) {
-                ssidStr = ssidStr.substring(0, maxLen);
-            }
-            const char* ssid = ssidStr.c_str();
-            Paint_DrawString_EN(190, 35 + i * 12, ssid, &Font12, WHITE, BLACK);
+    } else {
+        n = min(n, 7);
+        for (int i = 0; i < n; i++) {
+            String ssid = String(i + 1) + ": " + WiFi.SSID(i);
+            ssid = ssid.substring(0, 15);
+            Paint_DrawString_EN(190, 35 + i * 12, ssid.c_str(), &Font12, WHITE, BLACK);
         }
     }
-    // Update the e-paper display with the new image
-    EPD_2IN9_Display(blackImage);
 
-    // Delay for 2 seconds before proceeding
+    EPD_2IN9_Display(blackImage);
     DEV_Delay_ms(2000);
 
-    for (int z = 0; z < numOfNetworks; z++) {
-        // 读取EEPROM中WIFI信息并连接
+    for (int z = 0; z < n; z++) {
         for (int i = 0; i < wifiCount; i++) {
             int addr = i * 64;
-            String ssid;
-            ssid.reserve(33);
-            for (int j = 0; j < 32; j++) {
-                ssid += char(EEPROM.read(addr++));
-            }
+            String ssid; 
+            for (int j = 0; j < 32; j++) ssid += char(EEPROM.read(addr++)); 
             String password;
-            password.reserve(33);
-            for (int j = 0; j < 32; j++) {
-                password += char(EEPROM.read(addr++));
-            }
+            for (int j = 0; j < 32; j++) password += char(EEPROM.read(addr++));
             if (strcmp(ssid.c_str(), WiFi.SSID(z).c_str()) == 0) {
                 connectToWiFi(ssid.c_str(), password.c_str());
-                return;  // 连接成功后返回
+                return;  
             } 
         }
     }
     
-  if (WiFi.status() != WL_CONNECTED) {  
-    startAP();                     
-  } 
+    if (WiFi.status() != WL_CONNECTED) {
+        startAP();
+        EPD_2IN9_Init(EPD_2IN9_FULL);
+        Paint_DrawBitMap(logo);
+        EPD_2IN9_Display(blackImage);
+        EPD_2IN9_Sleep();
+    }
 }
 
 
@@ -229,7 +210,7 @@ void getEpaperImgData(const char* id)
 void setup()
 {
     DEV_Module_Init();
-    // Initialize the e-paper display
+  
     EPD_2IN9_Init(EPD_2IN9_FULL);
     EPD_2IN9_Clear();
     EEPROM.begin(EEPROM_SIZE);
@@ -237,78 +218,6 @@ void setup()
     scanWiFi();
     return;
     RetrieveAllIds();
-
-#if 1   // Drawing on the image
-    printf("Drawing\r\n");
-    //1.Select Image
-    Paint_SelectImage(blackImage);
-    Paint_Clear(WHITE);
-
-    // 2.Drawing on the image
-    printf("Drawing:blackImage\r\n");
-    Paint_DrawPoint(10, 80, BLACK, DOT_PIXEL_1X1, DOT_STYLE_DFT);
-    Paint_DrawPoint(10, 90, BLACK, DOT_PIXEL_2X2, DOT_STYLE_DFT);
-    Paint_DrawPoint(10, 100, BLACK, DOT_PIXEL_3X3, DOT_STYLE_DFT);
-
-    Paint_DrawLine(20, 70, 70, 120, BLACK, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-    Paint_DrawLine(70, 70, 20, 120, BLACK, DOT_PIXEL_1X1, LINE_STYLE_SOLID);
-
-    Paint_DrawRectangle(20, 70, 70, 120, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-    Paint_DrawRectangle(80, 70, 130, 120, BLACK, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-
-    Paint_DrawCircle(45, 95, 20, BLACK, DOT_PIXEL_1X1, DRAW_FILL_EMPTY);
-    Paint_DrawCircle(105, 95, 20, WHITE, DOT_PIXEL_1X1, DRAW_FILL_FULL);
-
-    Paint_DrawLine(85, 95, 125, 95, BLACK, DOT_PIXEL_1X1, LINE_STYLE_DOTTED);
-    Paint_DrawLine(105, 75, 105, 115, BLACK, DOT_PIXEL_1X1, LINE_STYLE_DOTTED);
-
-    Paint_DrawString_EN(10, 0, "waveshare", &Font16, BLACK, WHITE);
-    Paint_DrawString_EN(10, 20, "hello world", &Font12, WHITE, BLACK);
-
-    Paint_DrawNum(10, 33, 123456789, &Font12, BLACK, WHITE);
-    Paint_DrawNum(10, 50, 987654321, &Font16, WHITE, BLACK);
-
-    Paint_DrawString_CN(130, 0,"你好abc", &Font12CN, BLACK, WHITE);
-    Paint_DrawString_CN(130, 20, "微雪电子", &Font24CN, WHITE, BLACK);
-
-    EPD_2IN9_Display(blackImage);
-    DEV_Delay_ms(2000);
-#endif
-
-#if 1   //Partial refresh, example shows time        
-    printf("Partial refresh\r\n");
-    EPD_2IN9_Init(EPD_2IN9_PART);
-    Paint_SelectImage(blackImage);
-    PAINT_TIME sPaint_time;
-    sPaint_time.Hour = 12;
-    sPaint_time.Min = 34;
-    sPaint_time.Sec = 56;
-    UBYTE num = 20;
-    for (;;) {
-        sPaint_time.Sec = (sPaint_time.Sec + 1) % 60;
-        sPaint_time.Min = (sPaint_time.Min + (sPaint_time.Sec == 0)) % 60;
-        sPaint_time.Hour = (sPaint_time.Hour + (sPaint_time.Min == 0 && sPaint_time.Sec == 0)) % 24;
-
-        Paint_ClearWindows(150, 80, 150 + Font20.Width * 7, 80 + Font20.Height, WHITE);
-        Paint_DrawTime(150, 80, &sPaint_time, &Font20, WHITE, BLACK);
-
-        num = num - 1;
-        if(num == 0) {
-            break;
-        }
-        EPD_2IN9_Display(blackImage);
-        DEV_Delay_ms(500);//Analog clock 1s
-    }
-
-#endif
-//     printf("Clear...\r\n");
-//     EPD_2IN9_Init(EPD_2IN9_FULL);
-//     EPD_2IN9_Clear();
-
-//     printf("Goto Sleep...\r\n");
-//     EPD_2IN9_Sleep();
-//     free(blackImage);
-    // blackImage = NULL;
 }
 
 /* The main loop -------------------------------------------------------------*/
@@ -333,7 +242,6 @@ void loop()
         }
         RetrieveAllIds();     
     } 
-    
 }
 
 

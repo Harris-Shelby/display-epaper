@@ -33,7 +33,7 @@
 #define _IMAGEDATA_H_
 
 extern const unsigned char gImage_2in9[];
-
+extern const unsigned char logo[];
 #endif
 /* FILE END */
 
