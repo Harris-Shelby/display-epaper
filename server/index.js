@@ -6,7 +6,7 @@ const getPixels = require("get-pixels");
 const { stringify } = require("querystring");
 
 formatImgData(
-  "/Users/weilaibushimeng/Documents/PlatformIO/Projects/display-epaper/server/logo.png"
+  "/Users/weilaibushimeng/Documents/PlatformIO/Projects/display-epaper/server/123.png"
 );
 
 async function formatImgData(originImageUrl) {
